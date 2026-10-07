@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:pocket_live2d_native/pocket_live2d_native.dart';
 
 import 'live2d_controller.dart';
 import 'models/face_tracking_state.dart';
@@ -11,11 +12,12 @@ final class Live2DMethodChannel implements Live2DController {
     MethodChannel? methodChannel,
     EventChannel? faceTrackingChannel,
     EventChannel? orientationChannel,
-  })  : _methodChannel = methodChannel ?? const MethodChannel('pocket_live2d/live2d'),
-        _faceTrackingChannel =
-            faceTrackingChannel ?? const EventChannel('pocket_live2d/face_tracking'),
-        _orientationChannel =
-            orientationChannel ?? const EventChannel('pocket_live2d/orientation');
+  })  : _methodChannel = methodChannel ??
+            const MethodChannel(PocketLive2DNative.methodChannel),
+        _faceTrackingChannel = faceTrackingChannel ??
+            const EventChannel(PocketLive2DNative.faceTrackingEventChannel),
+        _orientationChannel = orientationChannel ??
+            const EventChannel(PocketLive2DNative.orientationEventChannel);
 
   final MethodChannel _methodChannel;
   final EventChannel _faceTrackingChannel;
