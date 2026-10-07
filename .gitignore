@@ -1,0 +1,29 @@
+.dart_tool/
+.packages
+.pub/
+build/
+coverage/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Android
+android/.gradle/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+
+# iOS
+**/Pods/
+**/.symlinks/
+**/Flutter/ephemeral/
+**/DerivedData/
+
+# Live2D SDK / Core binaries
+vendor/live2d/
+third_party/live2d/
+CubismSdkForNative-*/
