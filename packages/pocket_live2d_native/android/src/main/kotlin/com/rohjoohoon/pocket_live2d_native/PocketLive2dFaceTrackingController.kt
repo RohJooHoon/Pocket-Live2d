@@ -40,6 +40,7 @@ internal class PocketLive2dFaceTrackingController(
     @Volatile
     private var active = false
 
+    @Volatile
     private var sessionId = 0L
 
     val isSupported: Boolean
@@ -73,7 +74,7 @@ internal class PocketLive2dFaceTrackingController(
 
         analysisExecutor.execute {
             try {
-                val landmarker = createFaceLandmarker()
+                val landmarker = createFaceLandmarker(token)
                 if (!isSessionActive(token)) {
                     landmarker.close()
                     return@execute
@@ -99,10 +100,9 @@ internal class PocketLive2dFaceTrackingController(
         imageAnalysis?.clearAnalyzer()
         imageAnalysis = null
 
-        mainExecutor.execute {
-            cameraProvider?.unbindAll()
-            cameraProvider = null
-        }
+        val provider = cameraProvider
+        cameraProvider = null
+        mainExecutor.execute { provider?.unbindAll() }
 
         val landmarker = faceLandmarker
         faceLandmarker = null
@@ -118,7 +118,7 @@ internal class PocketLive2dFaceTrackingController(
         analysisExecutor.shutdown()
     }
 
-    private fun createFaceLandmarker(): FaceLandmarker {
+    private fun createFaceLandmarker(token: Long): FaceLandmarker {
         val baseOptions = BaseOptions.builder()
             .setDelegate(Delegate.CPU)
             .setModelAssetPath(MODEL_ASSET_NAME)
@@ -133,9 +133,8 @@ internal class PocketLive2dFaceTrackingController(
             .setOutputFaceBlendshapes(true)
             .setOutputFacialTransformationMatrixes(true)
             .setRunningMode(RunningMode.LIVE_STREAM)
-            .setResultListener { result, _ -> handleResult(result) }
+            .setResultListener { result, _ -> handleResult(result, token) }
             .setErrorListener { error ->
-                val token = sessionId
                 reportError(
                     token,
                     "face_tracking_failed",
@@ -215,7 +214,21 @@ internal class PocketLive2dFaceTrackingController(
             )
 
             imageProxy.use {
-                bitmapBuffer.copyPixelsFromBuffer(it.planes[0].buffer)
+                val plane = it.planes[0]
+                val bytes = plane.buffer
+                val pixels = IntArray(width * height)
+                for (row in 0 until height) {
+                    for (column in 0 until width) {
+                        val offset = row * plane.rowStride + column * plane.pixelStride
+                        val red = bytes.get(offset).toInt() and 0xff
+                        val green = bytes.get(offset + 1).toInt() and 0xff
+                        val blue = bytes.get(offset + 2).toInt() and 0xff
+                        val alpha = bytes.get(offset + 3).toInt() and 0xff
+                        pixels[row * width + column] =
+                            (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+                    }
+                }
+                bitmapBuffer.setPixels(pixels, 0, width, 0, 0, width, height)
             }
 
             val transform = Matrix().apply {
@@ -252,8 +265,7 @@ internal class PocketLive2dFaceTrackingController(
         }
     }
 
-    private fun handleResult(result: FaceLandmarkerResult) {
-        val token = sessionId
+    private fun handleResult(result: FaceLandmarkerResult, token: Long) {
         if (!isSessionActive(token)) return
 
         if (result.faceLandmarks().isEmpty()) {

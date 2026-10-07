@@ -5,26 +5,46 @@ class CharacterInteractionCoordinator {
   CharacterInteractionCoordinator(this.controller);
 
   final Live2DController controller;
-
   CharacterInputMode _mode = CharacterInputMode.idle;
+  Future<void> _pending = Future<void>.value();
 
   CharacterInputMode get mode => _mode;
 
-  Future<void> setMode(CharacterInputMode nextMode) async {
+  Future<void> setMode(CharacterInputMode nextMode) {
+    final operation = _pending.then((_) => _transition(nextMode));
+    _pending = operation.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return operation;
+  }
+
+  Future<void> stop() {
+    // Cancel an outstanding permission/startup request before waiting for it.
+    final cancellation = controller.setMimicEnabled(false);
+    final operation = _pending.then((_) async {
+      await cancellation;
+      await _applyMode(CharacterInputMode.idle);
+      _mode = CharacterInputMode.idle;
+    });
+    _pending = operation.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return operation;
+  }
+
+  Future<void> _transition(CharacterInputMode nextMode) async {
     if (nextMode == _mode) return;
-
     final previousMode = _mode;
-
     try {
       await _applyMode(nextMode);
       _mode = nextMode;
     } catch (_) {
       try {
         await _applyMode(previousMode);
+        _mode = previousMode;
       } catch (_) {
-        // Preserve the original transition error. The caller can decide how to
-        // surface recovery failure while the coordinator keeps its last known
-        // logical mode.
+        _mode = CharacterInputMode.idle;
+        try {
+          await _applyMode(CharacterInputMode.idle);
+        } catch (_) {
+          // The original error is preserved; the UI receives runtime errors too.
+        }
       }
       rethrow;
     }
@@ -35,15 +55,12 @@ class CharacterInteractionCoordinator {
       case CharacterInputMode.idle:
         await controller.setMimicEnabled(false);
         await controller.setGyroEnabled(false);
-        break;
       case CharacterInputMode.gyro:
         await controller.setMimicEnabled(false);
         await controller.setGyroEnabled(true);
-        break;
       case CharacterInputMode.mimic:
         await controller.setGyroEnabled(false);
         await controller.setMimicEnabled(true);
-        break;
     }
   }
 }

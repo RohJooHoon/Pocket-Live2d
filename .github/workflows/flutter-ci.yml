@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Validate bundled Live2D model
+        run: python3 tool/validate_model_assets.py
+
       - name: Analyze
         run: flutter analyze
 
@@ -50,12 +53,7 @@ jobs:
           cache: true
 
       - name: Generate Android host project
-        run: >-
-          flutter create
-          --platforms=android
-          --project-name=pocket_live2d
-          --org=com.rohjoohoon
-          .
+        run: bash tool/bootstrap_platforms.sh android
 
       - name: Build Android debug APK
         run: flutter build apk --debug
@@ -74,12 +72,7 @@ jobs:
           cache: true
 
       - name: Generate iOS host project
-        run: >-
-          flutter create
-          --platforms=ios
-          --project-name=pocket_live2d
-          --org=com.rohjoohoon
-          .
+        run: bash tool/bootstrap_platforms.sh ios
 
       - name: Build iOS simulator app
         run: flutter build ios --simulator --no-codesign
