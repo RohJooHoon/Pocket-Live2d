@@ -136,7 +136,9 @@ void main() {
 
     final surface = find.byType(LookAtGestureSurface);
     final topLeft = tester.getTopLeft(surface);
-    await tester.tapAt(topLeft + const Offset(180, 50));
+    final gesture = await tester.startGesture(
+      topLeft + const Offset(180, 50),
+    );
     await tester.pump();
 
     expect(controller.lookAtCalls.last.dx, closeTo(0.8, 0.0001));
@@ -146,5 +148,7 @@ void main() {
     await tester.pump();
 
     expect(controller.lookAtCalls.last, Offset.zero);
+
+    await gesture.cancel();
   });
 }
