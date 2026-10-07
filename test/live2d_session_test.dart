@@ -13,6 +13,7 @@ void main() {
     await session.setGyroEnabled(true);
     expect(session.gyroEnabled, isFalse);
     expect(session.status, contains('sensor_unavailable'));
+    await session.close();
     session.dispose();
     await tester.pump();
     expect(native.disposed, isTrue);
@@ -36,6 +37,7 @@ void main() {
     await session.setActive(true);
     await tester.pump(const Duration(milliseconds: 34));
     expect(native.parameterCalls, 2);
+    await session.close();
     session.dispose();
     await tester.pump();
     expect(native.orientation.hasListener, isFalse);
@@ -47,10 +49,12 @@ void main() {
     final session = Live2DSession(native);
     await session.initialize();
     await tester.pump(const Duration(milliseconds: 34));
+    final cleanup = session.close();
     session.dispose();
     await tester.pump();
     expect(native.disposed, isFalse);
     native.parameterGate!.complete();
+    await cleanup;
     await tester.pump();
     expect(native.disposed, isTrue);
     await tester.pump(const Duration(milliseconds: 100));

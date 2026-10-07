@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'live2d/live2d_controller.dart';
 import 'live2d/live2d_method_channel.dart';
 import 'live2d/live2d_session.dart';
-import 'live2d/live2d_surface.dart';
+import 'live2d/live2d_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,7 +97,7 @@ class _CharacterHomePageState extends State<CharacterHomePage>
                                 onPointerUp: (_) => _session.endTouch(),
                                 onPointerCancel: (_) => _session.endTouch(),
                                 child: IgnorePointer(
-                                  child: widget.surfaceBuilder?.call(context) ?? const Live2DSurface(),
+                                  child: widget.surfaceBuilder?.call(context) ?? const Live2DView(),
                                 ),
                               );
                             })

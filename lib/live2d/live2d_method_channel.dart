@@ -13,11 +13,12 @@ final class Live2DMethodChannel implements Live2DController {
     MethodChannel? methodChannel,
     EventChannel? faceTrackingChannel,
     EventChannel? orientationChannel,
-  })  : _methodChannel = methodChannel ?? const MethodChannel('pocket_live2d/live2d'),
-        _faceTrackingChannel =
-            faceTrackingChannel ?? const EventChannel('pocket_live2d/face_tracking'),
-        _orientationChannel =
-            orientationChannel ?? const EventChannel('pocket_live2d/orientation');
+  })  : _methodChannel =
+            methodChannel ?? const MethodChannel('pocket_live2d/live2d'),
+        _faceTrackingChannel = faceTrackingChannel ??
+            const EventChannel('pocket_live2d/face_tracking'),
+        _orientationChannel = orientationChannel ??
+            const EventChannel('pocket_live2d/orientation');
 
   final MethodChannel _methodChannel;
   final EventChannel _faceTrackingChannel;
@@ -31,18 +32,21 @@ final class Live2DMethodChannel implements Live2DController {
       _faceTrackingStates ??= _faceTrackingChannel
           .receiveBroadcastStream()
           .where((event) => event is Map)
-          .map((event) => FaceTrackingState.fromMap(event as Map<Object?, Object?>));
+          .map((event) =>
+              FaceTrackingState.fromMap(event as Map<Object?, Object?>));
 
   @override
   Stream<OrientationState> get orientationStates =>
       _orientationStates ??= _orientationChannel
           .receiveBroadcastStream()
           .where((event) => event is Map)
-          .map((event) => OrientationState.fromMap(event as Map<Object?, Object?>));
+          .map((event) =>
+              OrientationState.fromMap(event as Map<Object?, Object?>));
 
   @override
   Future<Live2DCapabilities> initialize() async {
-    final map = await _methodChannel.invokeMapMethod<Object?, Object?>('initialize');
+    final map =
+        await _methodChannel.invokeMapMethod<Object?, Object?>('initialize');
     return Live2DCapabilities.fromMap(map ?? const {});
   }
 
@@ -64,8 +68,8 @@ final class Live2DMethodChannel implements Live2DController {
       });
 
   @override
-  Future<void> setMimicEnabled(bool enabled) =>
-      _methodChannel.invokeMethod<void>('setMimicEnabled', {'enabled': enabled});
+  Future<void> setMimicEnabled(bool enabled) => _methodChannel
+      .invokeMethod<void>('setMimicEnabled', {'enabled': enabled});
 
   @override
   Future<void> setGyroEnabled(bool enabled) =>

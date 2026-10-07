@@ -7,18 +7,22 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const methods = MethodChannel('test/live2d');
   const events = EventChannel('test/orientation');
-  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   tearDown(() {
     messenger.setMockMethodCallHandler(methods, null);
-    messenger.setMockMethodCallHandler(const MethodChannel('test/orientation'), null);
+    messenger.setMockMethodCallHandler(
+        const MethodChannel('test/orientation'), null);
   });
 
   test('initialize and parameter map keep the native wire contract', () async {
     final calls = <MethodCall>[];
     messenger.setMockMethodCallHandler(methods, (call) async {
       calls.add(call);
-      return call.method == 'initialize' ? {'nativeSurface': true, 'gyro': true, 'renderer': false} : null;
+      return call.method == 'initialize'
+          ? {'nativeSurface': true, 'gyro': true, 'renderer': false}
+          : null;
     });
     final bridge = Live2DMethodChannel(methodChannel: methods);
     final capabilities = await bridge.initialize();
@@ -29,9 +33,11 @@ void main() {
     expect((calls.last.arguments as Map)['ParamAngleX'], 12.0);
   });
 
-  test('cancelling the last orientation listener cancels native stream', () async {
+  test('cancelling the last orientation listener cancels native stream',
+      () async {
     final calls = <String>[];
-    messenger.setMockMethodCallHandler(const MethodChannel('test/orientation'), (call) async {
+    messenger.setMockMethodCallHandler(const MethodChannel('test/orientation'),
+        (call) async {
       calls.add(call.method);
       return null;
     });

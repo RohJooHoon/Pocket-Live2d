@@ -1,7 +1,7 @@
 import Flutter
 import UIKit
 
-final class DiagnosticSurface: UIView, FlutterPlatformView {
+final class PocketLive2dPlatformView: UIView, FlutterPlatformView {
     private var parameters: [String: Double] = [:]
 
     override init(frame: CGRect) {
@@ -31,13 +31,13 @@ final class DiagnosticSurface: UIView, FlutterPlatformView {
     }
 }
 
-final class DiagnosticSurfaceFactory: NSObject, FlutterPlatformViewFactory {
+final class PocketLive2dViewFactory: NSObject, FlutterPlatformViewFactory {
     // Flutter owns the view. The plugin never retains disposed platform views.
-    let surfaces = NSHashTable<DiagnosticSurface>.weakObjects()
+    let surfaces = NSHashTable<PocketLive2dPlatformView>.weakObjects()
     var parameters: [String: Double] = [:]
 
     func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> FlutterPlatformView {
-        let surface = DiagnosticSurface(frame: frame)
+        let surface = PocketLive2dPlatformView(frame: frame)
         surfaces.add(surface)
         surface.update(parameters)
         return surface

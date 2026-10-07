@@ -11,7 +11,6 @@ class Live2DTrackingConfig {
     this.eyeGain = 0.7,
     this.bodyGain = 0.25,
     this.trackingConfidenceThreshold = 0.35,
-    this.deadZone = 0.04,
   });
 
   final double maxHeadX;
@@ -21,7 +20,6 @@ class Live2DTrackingConfig {
   final double eyeGain;
   final double bodyGain;
   final double trackingConfidenceThreshold;
-  final double deadZone;
 }
 
 class Live2DTrackingMapper {
@@ -70,12 +68,7 @@ class Live2DTrackingMapper {
     );
   }
 
-  double _normalized(double value) {
-    final unit = _clampUnit(value);
-    final zone = _clamp(config.deadZone, 0, 0.99);
-    if (unit.abs() <= zone) return 0;
-    return unit.sign * (unit.abs() - zone) / (1 - zone);
-  }
+  double _normalized(double value) => _clampUnit(value);
 
   double _clamp01(double value) => _clamp(value, 0, 1);
 

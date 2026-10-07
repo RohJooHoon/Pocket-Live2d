@@ -1,7 +1,7 @@
 import CoreMotion
 import Flutter
 
-final class OrientationSource: NSObject, FlutterStreamHandler {
+final class PocketLive2dOrientationController: NSObject, FlutterStreamHandler {
     private let motion = CMMotionManager()
     private var sink: FlutterEventSink?
     private var neutral: [Double]?

@@ -8,7 +8,7 @@ import android.view.View
 import io.flutter.plugin.platform.PlatformView
 
 /** Input diagnostic only. Replace with a Cubism renderer after SDK installation. */
-internal class DiagnosticSurface(context: Context, private val onDispose: () -> Unit) : View(context), PlatformView {
+internal class PocketLive2dPlatformView(context: Context, private val onDispose: () -> Unit) : View(context), PlatformView {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var parameters: Map<String, Double> = emptyMap()
 

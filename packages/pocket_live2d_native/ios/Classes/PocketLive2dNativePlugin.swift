@@ -2,8 +2,8 @@ import Flutter
 import UIKit
 
 public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
-    private let orientation = OrientationSource()
-    private let factory = DiagnosticSurfaceFactory()
+    private let orientation = PocketLive2dOrientationController()
+    private let factory = PocketLive2dViewFactory()
     private var initialized = false
     private var appActive = true
     private var observers: [NSObjectProtocol] = []
@@ -15,7 +15,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
         let methods = FlutterMethodChannel(name: "pocket_live2d/live2d", binaryMessenger: registrar.messenger())
         instance.methodChannel = methods
         registrar.addMethodCallDelegate(instance, channel: methods)
-        registrar.register(instance.factory, withId: "pocket_live2d/surface")
+        registrar.register(instance.factory, withId: "pocket_live2d/view")
         let events = FlutterEventChannel(name: "pocket_live2d/orientation", binaryMessenger: registrar.messenger())
         events.setStreamHandler(instance.orientation)
         let face = FlutterEventChannel(name: "pocket_live2d/face_tracking", binaryMessenger: registrar.messenger())

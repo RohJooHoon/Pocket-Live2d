@@ -23,6 +23,7 @@ void main() {
     expect(find.textContaining('sensor_unavailable'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    await native.disposalStarted.future;
     expect(native.disposed, isTrue);
   });
 }

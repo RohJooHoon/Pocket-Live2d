@@ -4,3 +4,4 @@ linter:
   rules:
     avoid_print: true
     prefer_final_locals: true
+

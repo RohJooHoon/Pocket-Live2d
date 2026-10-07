@@ -14,6 +14,7 @@ class FakeLive2DController implements Live2DController {
   Completer<void>? parameterGate;
   bool failGyro = false;
   bool disposed = false;
+  final disposalStarted = Completer<void>();
   int parameterCalls = 0;
   int concurrentCalls = 0;
   int maxConcurrentCalls = 0;
@@ -26,13 +27,17 @@ class FakeLive2DController implements Live2DController {
   Future<Live2DCapabilities> initialize() async => const Live2DCapabilities(nativeSurface: true, gyro: true);
   @override
   Future<void> setGyroEnabled(bool enabled) async {
-    if (enabled && failGyro) throw PlatformException(code: 'sensor_unavailable');
+    if (enabled && failGyro) {
+      throw PlatformException(code: 'sensor_unavailable');
+    }
   }
   @override
   Future<void> setParameters(Live2DParameterState state) async {
     parameterCalls++;
     concurrentCalls++;
-    if (concurrentCalls > maxConcurrentCalls) maxConcurrentCalls = concurrentCalls;
+    if (concurrentCalls > maxConcurrentCalls) {
+      maxConcurrentCalls = concurrentCalls;
+    }
     sentParameters.add(state);
     await parameterGate?.future;
     concurrentCalls--;
@@ -54,6 +59,7 @@ class FakeLive2DController implements Live2DController {
   @override
   Future<void> dispose() async {
     disposed = true;
+    disposalStarted.complete();
     await orientation.close();
   }
 }

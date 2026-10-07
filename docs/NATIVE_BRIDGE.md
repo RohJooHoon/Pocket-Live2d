@@ -18,7 +18,7 @@ Flutter의 GeneratedPluginRegistrant가 Kotlin/Swift 구현을 등록하므로
 | MethodChannel | `pocket_live2d/live2d` | 제어 명령 |
 | EventChannel | `pocket_live2d/orientation` | 정규화 기울기 |
 | EventChannel | `pocket_live2d/face_tracking` | 향후 얼굴 추적용; 현재 이벤트 없음 |
-| PlatformView | `pocket_live2d/surface` | 입력 진단용 Android View / UIView |
+| PlatformView | `pocket_live2d/view` | 입력 진단용 Android View / UIView |
 
 | 명령 | 인자 | 결과 |
 |---|---|---|
@@ -70,7 +70,7 @@ Phase D 시작 전에 native 공통 mapping 구현과 Dart 계약의 일치 테�
 
 1. 공식 Cubism SDK/Core를 개발 환경에 별도로 설치한다. Core는 git에 넣지 않는다.
 2. 앱용 Android OpenGL / iOS Metal renderer 및 모델 resource loader를 구현한다.
-3. `DiagnosticSurface`를 renderer surface로 교체하고 `setParameters`를 renderer에 적용한다.
+3. `PocketLive2dPlatformView`를 renderer surface로 교체하고 `setParameters`를 renderer에 적용한다.
 4. model3.json과 Motion/Expression/HitArea 메타데이터를 검증한다.
 5. 실제 모델 표시 및 API 실행 확인 후에만 `renderer: true`를 반환한다.
 6. Face Tracking/Wallpaper 역시 실구현이 연결되기 전에는 capability를 false로 유지한다.
@@ -90,3 +90,20 @@ Phase D 시작 전에 native 공통 mapping 구현과 Dart 계약의 일치 테�
 - [Flutter iOS Platform Views](https://docs.flutter.dev/platform-integration/ios/platform-views)
 - [Android SensorManager](https://developer.android.com/reference/android/hardware/SensorManager)
 - [Apple Core Motion device motion](https://developer.apple.com/documentation/coremotion/cmmotionmanager/startdevicemotionupdates(using:to:withhandler:))
+
+## 기존 scaffold와의 통합
+
+`Live2DView`, `PocketLive2DNative`의 채널/view 상수, `CharacterInteractionCoordinator`,
+`OrientationFilter`, `PocketLive2dRenderer` 연결 경계를 유지한다.
+앱은 `OrientationFilter(smoothingFactor: 1)`로 dead zone을 적용한 후 부위별
+시간 보간을 수행한다. gyro 활성화 전에 mimic을 끄는 기존 mode 전환 순서도 유지한다.
+실제 렌더러를 연결하기 전에는 no-op 모델 로드를 성공으로 반환하지 않는다.
+
+현재 30Hz Native → Dart → Native 입력 경로는 프로토타입 검증용이다.
+Cubism renderer와 Wallpaper 연결 단계에서는 센서 → 공통 native mapper → renderer로
+고주파 경로를 옮기고, Flutter event stream은 UI/debug용으로 유지한다.
+
+FaceTrackingState의 headYaw/Pitch/Roll은 degrees, blink/mouthOpen/confidence는 0..1,
+eyeLookX/Y 및 mouthForm은 -1..1이다. 아직 카메라 이벤트는 발생하지 않는다.
+
+SDK 배치와 모델 asset 규약은 [`CUBISM_SDK_SETUP.md`](CUBISM_SDK_SETUP.md)를 따른다.

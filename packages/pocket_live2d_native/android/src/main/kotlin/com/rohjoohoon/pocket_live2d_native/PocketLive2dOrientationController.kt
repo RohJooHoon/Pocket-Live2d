@@ -7,7 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import io.flutter.plugin.common.EventChannel
 
-internal class OrientationSource(context: Context) : EventChannel.StreamHandler, SensorEventListener {
+internal class PocketLive2dOrientationController(context: Context) : EventChannel.StreamHandler, SensorEventListener {
     private val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val sensor = manager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
         ?: manager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)

@@ -18,19 +18,19 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
     private lateinit var methods: MethodChannel
     private lateinit var orientationEvents: EventChannel
     private lateinit var faceEvents: EventChannel
-    private lateinit var orientation: OrientationSource
+    private lateinit var orientation: PocketLive2dOrientationController
     private lateinit var application: Application
     private var activity: Activity? = null
     private var initialized = false
     private var appActive = true
     private var resumed = false
-    private val surfaces = mutableMapOf<Int, DiagnosticSurface>()
+    private val surfaces = mutableMapOf<Int, PocketLive2dPlatformView>()
     private var parameters: Map<String, Double> = emptyMap()
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         application = binding.applicationContext as Application
         application.registerActivityLifecycleCallbacks(this)
-        orientation = OrientationSource(binding.applicationContext)
+        orientation = PocketLive2dOrientationController(binding.applicationContext)
         methods = MethodChannel(binding.binaryMessenger, "pocket_live2d/live2d")
         methods.setMethodCallHandler(this)
         orientationEvents = EventChannel(binding.binaryMessenger, "pocket_live2d/orientation")
@@ -40,9 +40,9 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
             override fun onListen(arguments: Any?, events: EventChannel.EventSink) = Unit
             override fun onCancel(arguments: Any?) = Unit
         })
-        binding.platformViewRegistry.registerViewFactory("pocket_live2d/surface", object : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
+        binding.platformViewRegistry.registerViewFactory("pocket_live2d/view", object : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
             override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
-                return DiagnosticSurface(context) { surfaces.remove(viewId) }.also {
+                return PocketLive2dPlatformView(context) { surfaces.remove(viewId) }.also {
                     surfaces[viewId] = it
                     it.update(parameters)
                 }

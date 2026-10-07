@@ -4,12 +4,14 @@ import 'package:pocket_live2d/live2d/models/live2d_parameter_state.dart';
 import 'package:pocket_live2d/live2d/models/orientation_state.dart';
 import 'package:pocket_live2d/live2d/tracking/live2d_parameter_smoother.dart';
 import 'package:pocket_live2d/live2d/tracking/live2d_tracking_mapper.dart';
+import 'package:pocket_live2d/live2d/tracking/orientation_filter.dart';
 
 void main() {
   const mapper = Live2DTrackingMapper();
 
   test('sensor noise is neutral, and full tilt reaches bounded limits', () {
-    expect(mapper.fromOrientation(const OrientationState(x: 0.02)).angleX, 0);
+    final filter = OrientationFilter(config: const OrientationFilterConfig(deadZone: 0.04, smoothingFactor: 1));
+    expect(mapper.fromOrientation(filter.update(const OrientationState(x: 0.02))).angleX, 0);
     final state = mapper.fromOrientation(const OrientationState(x: 10, y: -10));
     expect(state.angleX, 30);
     expect(state.angleY, -30);
