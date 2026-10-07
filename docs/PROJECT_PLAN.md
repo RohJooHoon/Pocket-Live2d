@@ -1,88 +1,75 @@
 # MotionMate 개발 계획과 진행 상태
 
-목표: iPhone/Android 앱에서 자이로·터치·흔들기·얼굴 따라하기에 반응하는 Live2D 캐릭터를 제공하고,
-Android 홈 화면에서는 같은 모델을 Live Wallpaper로 사용한다.
+목표: 기울이기·흔들기·터치에 반응하는 Live2D 캐릭터를 **캐릭터별 웹사이트**로 공개합니다. 박람회 태블릿 시연과 관람객 휴대폰(QR 접속)에서 바로 체험할 수 있게 합니다.
 
-갱신: 2026-10-07. 체크된 항목은 **소스 구현 또는 데이터 준비**를 뜻한다.
-SDK 포함 빌드·실기기 검증은 별도 체크하며, 코드가 있다는 이유로 MVP 완료로 판단하지 않는다.
+갱신: 2026-10-07. 체크된 항목은 **코드 구현 또는 문서 준비**를 뜻합니다.
+SDK를 넣은 실제 표시와 기기 검증은 따로 체크합니다.
 
-## 1. 기반 안정화
+## 방향 전환 기록
 
-- [x] Flutter 앱, 로컬 Native plugin, MethodChannel/EventChannel/PlatformView
-- [x] 터치 LookAt PR #5 main 반영
-- [x] 모드 전환 직렬화, 실패 시 이전 모드 복구
-- [x] 카메라 권한/시작 대기 취소 및 시작 실패 응답
-- [x] Android 이미지 row/pixel stride 처리와 이전 세션 콜백 차단
-- [x] 백그라운드 카메라·센서·렌더링 중지 및 foreground 모드 복귀 코드
-- [x] 플랫폼 생성 시 Android/iOS 카메라 권한 설명 자동 구성
-- [x] Flutter 테스트, Native 입력 필터 테스트, 모델 무결성 검사 CI
-- [ ] 실제 기기에서 권한 거부·허용·취소·회전·복귀 반복 검증
+- Flutter 앱(iOS/Android, Android 라이브 배경화면, 얼굴 따라하기)에서 **웹으로 전환**했습니다. 앱 코드는 git 기록에 남아 있습니다.
+- 이유는 다음과 같습니다.
+  - 스토어 심사와 결제 규정 없이 QR로 바로 체험시키려는 목적
+  - Live2D 약관상 일반 앱과 같은 면제 범위에서 운영 가능
+  - 박람회와 외주 홍보에 맞는 형태
+- 얼굴 따라하기는 Live2D 약관상 확장성 애플리케이션에 해당할 위험이 있어 **이번 범위에서 제외**했습니다. 근거는 [라이선스 문서](LICENSING.md)에 있습니다.
 
-## 2. 테스트 모델과 Cubism 렌더링
+## 1. 웹 기반
 
-- [x] 공식 Mark 샘플 moc3/texture/physics/motion 데이터 포함 및 출처 기록
-- [x] Mark에 TapBody/Shake 모션 그룹과 happy/surprised 테스트 표정 추가
-- [x] 공통 C++ 모델 로더, 파라미터 매퍼, 모션/표정/physics 처리
-- [x] Android GLSurfaceView/JNI와 iOS GLKView/Objective-C++ 연결
-- [x] 공식 Native 5-r.5 SDK 로컬 준비 스크립트
-- [x] SDK 부재를 명시하는 오류/상태 UI
-- [ ] 공식 Core 설치 후 SDK 활성 경로 Android/iOS 컴파일 검증
-- [ ] iPhone/Galaxy에서 동일 Mark 표시, texture/mask/physics 확인
-- [ ] GL context 재생성·모델 재로드·자원 해제 검증
+- [x] TypeScript + Vite 프로젝트, 캐릭터별 빌드 (`CHARACTER=<id>`)
+- [x] SDK 없는 빌드에서도 동작하는 페이지와 안내 문구
+- [x] Core 확인 뒤 Framework를 별도 파일로 불러오기 (Core가 없어도 페이지가 멈추지 않음)
+- [x] Cubism SDK for Web 준비 스크립트, SDK 파일 git 제외
+- [x] 공개 CI: 단위 테스트, 타입 검사, 모델 검사, 캐릭터별 빌드, SDK 파일 유출 검사
+- [x] 휴대폰 테스트용 https 개발 서버
 
-Core는 저장소에 없으므로 지금 공개 CI의 빌드 성공만으로 실제 렌더링이 검증되지 않는다.
-설치 절차: [CUBISM_SDK_SETUP.md](CUBISM_SDK_SETUP.md).
+## 2. 캐릭터 표시 (Cubism SDK for Web 5-r.5)
 
-## 3. 상호작용과 따라하기
+- [x] 모델 로딩: moc3 무결성 검사, 표정, 물리, 포즈, 눈 깜빡임, 호흡, 사용자 데이터, 모션
+- [x] 5-r.5 업데이트 스케줄러, 실행 중 셰이더 로딩, 오프스크린 매니저 대응
+- [x] 화면 크기·밀도 대응 (최대 2배), 탭 전환 시 일시정지
+- [x] 공개 Framework 원본으로 렌더러 타입 검사, SDK 모드 번들 빌드 확인
+- [ ] **실제 SDK로 Mark 표시 확인** (텍스처, 마스크, 물리, 모션, 표정)
+- [ ] iPhone Safari, Android Chrome, 삼성 인터넷, iPad, PC 브라우저에서 표시 확인
+- [ ] WebGL 컨텍스트 손실 후 복구 방식 결정 (지금은 새로고침 안내)
 
-- [x] iOS Core Motion / Android Rotation Vector 정규화·dead zone·필터
-- [x] 눈/머리/몸 gain 및 dt 기반 보간
-- [x] 드래그 LookAt, 터치 해제 시 기본 입력 복원
-- [x] 탭 좌표 전달과 HitArea 판정; Mark는 drawable 경계 fallback 사용
-- [x] 흔들기 감지, cooldown, Shake 모션 호출
-- [x] 따라하기 모드 선택과 전면 카메라 활성/종료
-- [x] iOS ARKit, Android MediaPipe 얼굴 상태 추출
-- [x] 공통 FaceTrackingState → Live2D 파라미터
-- [x] 얼굴 미검출/confidence 필터와 기본 상태 복귀 코드
-- [ ] 실기기 얼굴 방향·눈 깜빡임·입 벌림·저조도·가림 테스트
-- [ ] 모션과 face/physics 동시 적용 순서의 시각 품질 검증
-- [ ] 센서 calibration 및 사용자가 조절하는 민감도 설정 UI
+## 3. 상호작용
 
-## 4. Android Live Wallpaper
+- [x] 기울이기: iOS 권한 요청, 시작 자세 보정, 화면 회전 대응, 데드존, 프레임 독립 스무딩
+- [x] 흔들기: 중력 보정, 쿨다운
+- [x] 터치: 드래그 시선, 짧은 탭 반응 (HitArea가 없으면 보이는 파츠 경계로 판정)
+- [x] 반응·표정 버튼
+- [ ] 실기기 기울기 방향·감도 조정
+- [ ] 박람회 태블릿 장시간(2~4시간) 시연 테스트
 
-- [x] 시스템 WallpaperService/manifest/설정 진입
-- [x] 공통 모델 로더와 파라미터 런타임 재사용
-- [x] 자이로·터치·Idle Motion
-- [x] visibility/surface lifecycle, invisible 센서/프레임 중지
-- [x] visible 약 30 FPS 프레임 요청
-- [x] 앱과 분리된 wallpaper 프로세스, Engine별 shader 분리 코드, 카메라 코드 없음
-- [ ] Galaxy 실제 홈/잠금 화면·미리보기·중복 Engine 검증
-- [ ] 모델/민감도 설정의 기존 wallpaper Engine 간 동기화 개선
-- [ ] 배터리·장시간 발열·메모리 측정
+## 4. 약관·개인정보
 
-현재 번들 모델은 Mark 하나이며, 동적으로 모델을 내려받거나 선택하는 UI는 제공하지 않는다.
+- [x] 웹용 이용약관 (Core·캐릭터 데이터 보호 조항), 개인정보처리방침 (접속 기록, 카메라 미사용)
+- [x] 첫 방문 동의, 정보 화면에서 문서 다시 보기
+- [ ] 자리표시자 채우기: 운영자 이름, 문의 이메일, 공개일, 호스팅 사업자, 접속 기록 보관 기간
+- [ ] 서비스 이름 확정 (MotionMate는 다른 앱과 겹침)
 
-## 5. 완료 기준과 다음 실행 순서
+## 5. 공개 준비
 
-1. 공식 SDK/Core를 준비하고 Android/iOS 전체 빌드 오류를 해결한다.
-2. Mark 렌더링과 motion/expression/physics를 실기기에서 확인한다.
-3. 입력 모드, 권한 취소, foreground 복귀, 얼굴 미검출을 반복 검증한다.
-4. Galaxy에서 wallpaper 설정·화면 전환·Engine 재생성을 검증한다.
-5. 모델/민감도 설정과 calibration을 구현한 뒤 성능/배터리 결과를 기록한다.
-6. 샘플 모델을 제품 배포에 쓸 경우 해당 모델과 Cubism 배포 조건을 확인한다.
+- [ ] 직접 만든 캐릭터 3개 추가 (`characters/<id>/`)
+- [ ] 캐릭터별 도메인과 https 호스팅
+- [ ] QR 코드 제작과 스캔 확인
+- [ ] Live2D 문의: 박람회 시연, 리깅 외주 고객용 사이트 제공 구조, (나중에) 따라하기
 
-MVP 완료는 iPhone/Galaxy 실제 표시와 상호작용, 카메라 즉시 종료, wallpaper 비가시 중지,
-장시간 안정성 결과가 모두 확인된 시점이다.
+## 다음 순서
+
+1. Cubism SDK for Web을 준비하고 `npm run dev`로 Mark 표시를 확인합니다.
+2. 휴대폰(`npm run dev:https`)에서 [웹 테스트 가이드](WEB_TESTING.md)의 A~G를 확인합니다.
+3. 직접 만든 캐릭터를 넣고 사이트별로 빌드·배포합니다.
+4. 약관 자리표시자와 서비스 이름을 확정합니다.
+5. 박람회 전에 태블릿 장시간 테스트와 Live2D 문의를 마칩니다.
 
 ## 구조
 
-- `lib/live2d/`: Controller, bridge, 입력 모드, Flutter 상태 모델
-- `lib/legal/`: 첫 실행 약관 동의 화면, 약관·방침 보기 화면
-- `packages/pocket_live2d_native/common/`: 공통 Cubism 런타임과 입력 보간
-- `packages/pocket_live2d_native/android/`: Kotlin/JNI, CameraX/MediaPipe, wallpaper
-- `packages/pocket_live2d_native/ios/`: Swift/Objective-C++, ARKit/Core Motion
-- `assets/live2d/mark/`: 공식 테스트 모델과 테스트 표정
-- `assets/legal/`: 이용약관, 개인정보처리방침 (앱과 저장소가 같은 파일 사용)
-- `tool/`: 호스트 구성, SDK 준비, 모델 검사
+- `src/`: 페이지, 입력 처리, 약관, 렌더러
+- `legal/`: 이용약관, 개인정보처리방침
+- `characters/<id>/`: 캐릭터 설정과 모델
+- `tool/`: SDK 준비, 정적 파일 준비, 모델 검사
+- `vendor/cubism/`: 로컬에만 두는 Cubism SDK (git 제외)
 
-[Native bridge 계약](NATIVE_BRIDGE.md) · [얼굴 추적](FACE_TRACKING.md) · [실기기 실행·테스트](DEVICE_TESTING.md) · [라이선스와 출시 준비](LICENSING.md)
+[Cubism SDK 설정](CUBISM_SDK_SETUP.md) · [웹 테스트·배포](WEB_TESTING.md) · [라이선스와 공개 준비](LICENSING.md)

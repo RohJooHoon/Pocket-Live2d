@@ -1,83 +1,70 @@
-# Cubism Native 5-r.5 설정과 검증
+# Cubism SDK for Web 설정
 
-Core는 공식 배포 패키지에서 별도로 설치한다. 저장소에는 Core나 SDK 복사본을 커밋하지 않는다.
-공식 다운로드: https://www.live2d.com/download/cubism-sdk/download-native/
-(링크 출처: [CubismNativeSamples README](https://github.com/Live2D/CubismNativeSamples). 받은 파일명이 `CubismSdkForNative-5-r.5`인지 확인한다.)
+이 저장소에는 Live2D Cubism SDK를 넣지 않습니다. 각자 공식 사이트에서 받아 로컬에만 준비합니다.
 
-## SDK 준비
+## 1. 받기
 
-Native **5-r.5** 패키지를 압축 해제한다. 이 어댑터는 해당 Framework의
-`LoadFileFunction`/외부 OpenGL shader API와 render target size API를 사용한다.
+- 다운로드: https://www.live2d.com/download/cubism-sdk/download-web/
+- **Cubism SDK for Web 5-r.5**를 받습니다. 라이선스 동의 후 받을 수 있습니다.
+- **Native SDK(CubismSdkForNative)는 웹에서 쓰지 않습니다.** 준비 스크립트에 Native SDK를 넣으면 안내 문구와 함께 거부합니다.
 
-```bash
-python3 tool/prepare_cubism.py /path/to/CubismSdkForNative-5-r.5
-bash tool/bootstrap_platforms.sh
-```
+## 2. 어디에 두나
 
-스크립트는 Core/Framework를 `packages/pocket_live2d_native/cubism/`에 복사하고,
-stb PNG decoder와 StandardES shader 소스 헤더를 생성한다.
-로컬 Framework 복사본의 OpenGL shader singleton을 thread_local로 바꿔
-wallpaper Engine별 GL thread/context의 shader program을 분리한다.
-공통 Runtime은 Framework 호출을 mutex로 직렬화한다.
-macOS에서는 device/simulator Core 라이브러리로 XCFramework를 만들어
-`packages/pocket_live2d_native/ios/Cubism/`에 배치한다.
-bootstrap은 공통 C++ 소스를 iOS pod 내부 `Classes/Runtime/`에 복사한다.
-모두 gitignore 대상이다. 공통 C++ 코드를 수정하면 bootstrap을 다시 실행한다.
+압축을 푼 폴더는 어디에 둬도 됩니다. 예: `~/Downloads/CubismSdkForWeb-5-r.5`
 
-SDK 준비 후 기존 iOS Pods를 쓰고 있었다면:
+폴더 안에 `Core/`, `Framework/`, `Samples/`가 바로 보여야 합니다.
+
+저장소 폴더 안에 풀어도 `CubismSdkForWeb-*/`는 git에 올라가지 않도록 막혀 있습니다.
+
+## 3. 준비 스크립트 실행
 
 ```bash
-cd ios
-pod install
-cd ..
+python3 tool/prepare_cubism_web.py ~/Downloads/CubismSdkForWeb-5-r.5
 ```
 
-Android는 arm64-v8a/x86_64 Core static library를 요구한다.
-iOS는 Release-iphoneos와 Release-iphonesimulator-arm64를 요구하고,
-x86_64 simulator 라이브러리가 있으면 universal simulator library를 생성한다.
+스크립트가 필요한 파일만 `vendor/cubism/`에 복사합니다.
 
-## 모델 규약
+| 원본 | 복사 위치 | 용도 |
+|---|---|---|
+| `Core/live2dcubismcore.min.js` | `vendor/cubism/Core/` | 브라우저에서 모델을 읽는 엔진. 빌드 결과물에 포함됨 |
+| `Core/live2dcubismcore.d.ts` | `vendor/cubism/Core/` | 타입 정의 |
+| `Framework/src/` | `vendor/cubism/Framework/src/` | 모델 로딩, 모션, 물리, 렌더링 |
+| `Framework/Shaders/WebGL/` | `vendor/cubism/Framework/Shaders/` | 실행 중에 내려받는 셰이더. 빌드 결과물에 포함됨 |
+| `Framework/tsconfig.json` | `vendor/cubism/Framework/` | Framework를 공식 샘플과 같은 설정(ES6 클래스 필드)으로 컴파일하기 위해 필요 |
 
-현재 기본 모델은 `mark`이며 manifest는 `assets/live2d/mark/Mark.model3.json`이다.
-일반 규약은 `assets/live2d/<id>/<첫 글자를 대문자로 바꾼 id>.model3.json`이다.
-manifest에서 참조하는 texture/motion/physics/expression은 동일 모델 폴더 상대 경로로 읽는다.
-번들 추가 시 pubspec asset 디렉터리 선언도 추가해야 한다.
+`vendor/`는 `.gitignore` 대상입니다. **커밋하거나 공개 저장소·공개 CI에 올리면 안 됩니다** (Core 약관 6.2).
 
-Mark 원본에는 HitAreas가 없어 투명도가 0이 아닌 drawable의 경계로 탭을 판정한다.
-이는 pixel alpha 기반 hit test가 아니다. 모델이 제공하는 HitAreas가 있으면 그 정의를 사용한다.
-
-## 빌드
+## 4. 확인
 
 ```bash
-python3 tool/validate_model_assets.py
-flutter analyze
-flutter test
-flutter build apk --debug
-# macOS:
-flutter build ios --simulator --no-codesign
-flutter run
+npm run typecheck:sdk   # SDK 렌더러까지 타입 검사
+npm run dev             # 캐릭터가 보이면 성공
 ```
 
-SDK가 없으면 어댑터는 컴파일되지만 initialize가 `sdk_unavailable`을 반환한다.
-실제 모델 로드/렌더링은 수행하지 않는다.
-SDK 일부만 설치되었거나 지원 ABI가 없으면 빌드를 실패시켜 잘못된 설정을 드러낸다.
+SDK가 준비되면 `npm run dev`와 `npm run build`가 자동으로 다음을 처리합니다.
+- Core 스크립트를 페이지에 넣습니다.
+- 셰이더를 함께 배포합니다.
 
-## 검증 체크리스트
+SDK가 없으면 같은 명령이 "Live2D SDK가 연결되지 않은 빌드예요" 안내만 보여 주는 페이지를 만듭니다.
 
-기기별 실행 방법과 항목별 테스트 절차는 [실기기 실행·테스트 가이드](DEVICE_TESTING.md)를 따른다.
+## 동작 방식
 
-- [ ] SDK 활성 경로 Android/iOS 전체 컴파일과 링크
-- [ ] Mark 표시, texture/mask/physics, TapBody/Shake와 happy/surprised
-- [ ] drag 종료 후 gyro/idle 복원, mimic 동안 touch override 억제
-- [ ] 카메라 권한 거부·허용·시작 중 취소, 얼굴 미검출
-- [ ] background 카메라/센서 중지, foreground 입력 모드 복귀
-- [ ] 화면 크기/방향 변경, GL context 재생성, 모델 다시 로드
-- [ ] Galaxy 시스템 wallpaper 미리보기/설정/홈 전환, 비가시 센서 중지
-- [ ] wallpaper 미리보기와 설치된 Engine 동시 실행
-- [ ] 장시간 배터리/발열/메모리
+```text
+index.html  ── <script> cubism/live2dcubismcore.min.js   (SDK가 있을 때만 들어감)
+   └─ main.ts ── @cubism-adapter
+                  ├─ SDK 없음 → live2d/unavailable.ts     (안내 문구)
+                  └─ SDK 있음 → live2d/cubism/adapter.ts
+                                 └─ Core 확인 후 cubismRenderer.ts를 별도 파일로 불러옴
+```
 
-현재 SDK 활성 경로와 실기기 검증 결과는 없다.
-공개 CI는 SDK 없는 어댑터 빌드, Flutter 테스트, Native 입력 테스트,
-모델 파일 참조/헤더/존재 여부만 검증한다.
-Core를 공개 CI artifact나 Git에 올리지 않으며,
-SDK 포함 CI는 라이선스와 접근 범위를 확인한 private/self-hosted 환경에서 후속 구성한다.
+- Cubism Framework는 불러오는 순간 Core를 참조합니다. 그래서 Core가 실제로 로드된 것을 확인한 뒤에만 Framework를 불러옵니다.
+- 그 덕분에 Core 파일이 빠지거나 로드에 실패해도 페이지는 멈추지 않고 안내 문구를 보여 줍니다.
+- 모델 파일(moc3)은 Core의 무결성 검사를 거친 뒤에 읽습니다.
+
+## SDK 버전을 바꿀 때
+
+이 프로젝트는 5-r.5 Framework API에 맞춰 작성했습니다. 예를 들어 업데이트 스케줄러, 실행 중 셰이더 로딩, 오프스크린 매니저가 5-r.5 기준입니다.
+
+다른 버전을 쓰려면 다음 순서로 확인합니다.
+1. `npm run typecheck:sdk`로 API 차이를 확인합니다.
+2. [웹 테스트 가이드](WEB_TESTING.md)의 표시 항목을 다시 검증합니다.
