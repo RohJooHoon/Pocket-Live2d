@@ -46,6 +46,7 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
   Timer? _pendingTimer;
   Offset? _pendingTarget;
   Duration? _lastSentAt;
+  int? _activePointer;
   bool _disposed = false;
 
   @override
@@ -53,6 +54,7 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.enabled && !widget.enabled) {
+      _activePointer = null;
       _cancelPending();
       _send(Offset.zero, force: true);
     }
@@ -61,9 +63,30 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
   @override
   void dispose() {
     _disposed = true;
+    _activePointer = null;
     _cancelPending();
     _stopwatch.stop();
     super.dispose();
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if (!widget.enabled || _activePointer != null) return;
+    _activePointer = event.pointer;
+    _handlePosition(event.localPosition);
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (!widget.enabled || event.pointer != _activePointer) return;
+    _handlePosition(event.localPosition);
+  }
+
+  void _handlePointerEnd(PointerEvent event) {
+    if (event.pointer != _activePointer) return;
+    _activePointer = null;
+    _cancelPending();
+    if (widget.enabled && widget.resetOnEnd) {
+      _send(Offset.zero, force: true);
+    }
   }
 
   void _handlePosition(Offset localPosition) {
@@ -99,12 +122,6 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
     });
   }
 
-  void _reset() {
-    if (!widget.enabled || !widget.resetOnEnd) return;
-    _cancelPending();
-    _send(Offset.zero, force: true);
-  }
-
   void _send(Offset target, {bool force = false}) {
     if (_disposed) return;
 
@@ -126,19 +143,12 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.translucent,
-      onTapDown: widget.enabled
-          ? (details) => _handlePosition(details.localPosition)
-          : null,
-      onPanStart: widget.enabled
-          ? (details) => _handlePosition(details.localPosition)
-          : null,
-      onPanUpdate: widget.enabled
-          ? (details) => _handlePosition(details.localPosition)
-          : null,
-      onPanEnd: widget.enabled ? (_) => _reset() : null,
-      onPanCancel: widget.enabled ? _reset : null,
+      onPointerDown: widget.enabled ? _handlePointerDown : null,
+      onPointerMove: widget.enabled ? _handlePointerMove : null,
+      onPointerUp: widget.enabled ? _handlePointerEnd : null,
+      onPointerCancel: widget.enabled ? _handlePointerEnd : null,
       child: widget.child,
     );
   }
