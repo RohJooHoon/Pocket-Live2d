@@ -14,7 +14,6 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
     private lazy var orientationController = PocketLive2dOrientationController {
         [weak self] event in
         guard let self else { return }
-
         self.renderer.applyOrientation(
             x: self.number(event["x"]) ?? 0,
             y: self.number(event["y"]) ?? 0,
@@ -22,6 +21,22 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
         )
         self.orientationStreamHandler.emit(event)
     }
+
+    private lazy var faceTrackingController = PocketLive2dFaceTrackingController(
+        onState: { [weak self] state in
+            guard let self else { return }
+            self.renderer.applyFaceTracking(state)
+            self.faceTrackingStreamHandler.emit(
+                state.mapValues { $0 as Any }
+            )
+        },
+        onError: { [weak self] code, message in
+            self?.faceTrackingStreamHandler.emitError(
+                code: code,
+                message: message
+            )
+        }
+    )
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = PocketLive2dNativePlugin()
@@ -69,6 +84,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             handleLookAt(call, result: result)
         case "dispose":
             orientationController.stop()
+            faceTrackingController.stop()
             renderer.dispose()
             faceTrackingStreamHandler.clear()
             orientationStreamHandler.clear()
@@ -136,6 +152,8 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
+        faceTrackingController.stop()
+
         guard orientationController.isSupported else {
             result(
                 FlutterError(
@@ -170,8 +188,36 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
-        _ = enabled
-        // TODO: Start/stop front-camera face tracking in app mode only.
+        if !enabled {
+            faceTrackingController.stop()
+            result(nil)
+            return
+        }
+
+        orientationController.stop()
+
+        guard faceTrackingController.isSupported else {
+            result(
+                FlutterError(
+                    code: "face_tracking_unavailable",
+                    message: "ARKit face tracking is not supported on this device",
+                    details: nil
+                )
+            )
+            return
+        }
+
+        guard faceTrackingController.start() else {
+            result(
+                FlutterError(
+                    code: "face_tracking_start_failed",
+                    message: "Failed to start ARKit face tracking",
+                    details: nil
+                )
+            )
+            return
+        }
+
         result(nil)
     }
 
