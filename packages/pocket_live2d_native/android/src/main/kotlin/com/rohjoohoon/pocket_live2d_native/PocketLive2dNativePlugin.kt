@@ -32,6 +32,7 @@ class PocketLive2dNativePlugin :
     private var activityBinding: ActivityPluginBinding? = null
     private var activity: Activity? = null
     private var pendingMimicPermissionResult: MethodChannel.Result? = null
+    private var pendingMimicStartResult: MethodChannel.Result? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel = MethodChannel(binding.binaryMessenger, METHOD_CHANNEL)
@@ -61,7 +62,14 @@ class PocketLive2dNativePlugin :
                 faceTrackingStreamHandler.emit(state)
             },
             onError = { code, message ->
-                faceTrackingStreamHandler.emitError(code, message)
+                val startup = pendingMimicStartResult
+                pendingMimicStartResult = null
+                faceTrackingController.stop()
+                if (startup != null) {
+                    startup.error(code, message, null)
+                } else {
+                    faceTrackingStreamHandler.emitError(code, message)
+                }
             },
         )
 
@@ -204,8 +212,7 @@ class PocketLive2dNativePlugin :
                 Manifest.permission.CAMERA,
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            startMimic(currentActivity)
-            result.success(null)
+            startMimic(currentActivity, result)
             return
         }
 
@@ -226,10 +233,15 @@ class PocketLive2dNativePlugin :
         )
     }
 
-    private fun startMimic(currentActivity: Activity) {
+    private fun startMimic(currentActivity: Activity, result: MethodChannel.Result) {
+        if (pendingMimicStartResult != null) {
+            result.error("tracking_start_in_progress", "Face tracking is already starting", null)
+            return
+        }
+        pendingMimicStartResult = result
         faceTrackingController.start(currentActivity) {
-            // Startup completion is primarily surfaced through the MethodChannel.
-            // Runtime tracking failures continue through the EventChannel.
+            pendingMimicStartResult?.success(null)
+            pendingMimicStartResult = null
         }
     }
 
@@ -268,7 +280,7 @@ class PocketLive2dNativePlugin :
     }
 
     private fun detachActivity() {
-        faceTrackingController.stop()
+        stopInteractiveInputs()
         activityBinding?.removeRequestPermissionsResultListener(this)
         activityBinding = null
         activity = null
@@ -309,12 +321,15 @@ class PocketLive2dNativePlugin :
             return true
         }
 
-        startMimic(currentActivity)
-        pendingResult.success(null)
+        startMimic(currentActivity, pendingResult)
         return true
     }
 
     private fun resolvePendingPermissionRequestAsCancelled() {
+        pendingMimicStartResult?.error(
+            "face_tracking_start_cancelled", "Face tracking startup was cancelled", null,
+        )
+        pendingMimicStartResult = null
         pendingMimicPermissionResult?.error(
             "camera_permission_cancelled",
             "Camera permission request was cancelled",

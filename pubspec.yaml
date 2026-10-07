@@ -19,3 +19,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/live2d/mark/
+    - assets/live2d/mark/Mark.2048/
+    - assets/live2d/mark/motions/
+    - assets/live2d/mark/expressions/

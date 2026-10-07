@@ -74,7 +74,8 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
         let state = filter.apply(rawState)
 
         DispatchQueue.main.async { [weak self] in
-            self?.onState(state)
+            guard let self, self.isRunning else { return }
+            self.onState(state)
         }
     }
 
@@ -90,7 +91,9 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
 
     func session(_ session: ARSession, didFailWithError error: Error) {
         DispatchQueue.main.async { [weak self] in
-            self?.onError("face_tracking_failed", error.localizedDescription)
+            guard let self, self.isRunning else { return }
+            self.stop()
+            self.onError("face_tracking_failed", error.localizedDescription)
         }
     }
 
