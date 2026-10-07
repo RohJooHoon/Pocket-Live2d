@@ -1,5 +1,3 @@
-library pocket_live2d_native;
-
 /// Marker API for the native Pocket Live2D plugin.
 ///
 /// The app-facing MethodChannel and PlatformView contracts currently live in
