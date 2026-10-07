@@ -5,10 +5,12 @@ import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 
-internal class PocketLive2dViewFactory : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
+internal class PocketLive2dViewFactory(
+    private val renderer: PocketLive2dRenderer,
+) : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
     override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
         @Suppress("UNCHECKED_CAST")
         val creationParams = args as? Map<String, Any?> ?: emptyMap()
-        return PocketLive2dPlatformView(context, creationParams)
+        return PocketLive2dPlatformView(context, creationParams, renderer)
     }
 }
