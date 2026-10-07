@@ -1,19 +1,37 @@
 package com.rohjoohoon.pocket_live2d_native
 
+import android.Manifest
+import android.app.Activity
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.PluginRegistry
 
-class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
+class PocketLive2dNativePlugin :
+    FlutterPlugin,
+    MethodChannel.MethodCallHandler,
+    ActivityAware,
+    PluginRegistry.RequestPermissionsResultListener {
+
     private lateinit var methodChannel: MethodChannel
     private lateinit var faceTrackingChannel: EventChannel
     private lateinit var orientationChannel: EventChannel
     private lateinit var orientationController: PocketLive2dOrientationController
+    private lateinit var faceTrackingController: PocketLive2dFaceTrackingController
 
     private val faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private val orientationStreamHandler = PocketLive2dStreamHandler()
     private val renderer: PocketLive2dRenderer = PendingCubismRenderer()
+
+    private var activityBinding: ActivityPluginBinding? = null
+    private var activity: Activity? = null
+    private var pendingMimicPermissionResult: MethodChannel.Result? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel = MethodChannel(binding.binaryMessenger, METHOD_CHANNEL)
@@ -36,6 +54,17 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             orientationStreamHandler.emit(event)
         }
 
+        faceTrackingController = PocketLive2dFaceTrackingController(
+            binding.applicationContext,
+            onState = { state ->
+                renderer.applyFaceTracking(state)
+                faceTrackingStreamHandler.emit(state)
+            },
+            onError = { code, message ->
+                faceTrackingStreamHandler.emitError(code, message)
+            },
+        )
+
         binding.platformViewRegistry.registerViewFactory(
             VIEW_TYPE,
             PocketLive2dViewFactory(renderer),
@@ -55,7 +84,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             "setMimicEnabled" -> handleSetMimicEnabled(call, result)
             "lookAt" -> handleLookAt(call, result)
             "dispose" -> {
-                orientationController.stop()
+                stopInteractiveInputs()
                 renderer.dispose()
                 faceTrackingStreamHandler.clear()
                 orientationStreamHandler.clear()
@@ -111,6 +140,8 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
+        faceTrackingController.stop()
+
         if (!orientationController.isSupported) {
             result.error(
                 "sensor_unavailable",
@@ -139,8 +170,67 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
-        // TODO: Start/stop CameraX face tracking in app mode only.
-        result.success(null)
+        if (!enabled) {
+            faceTrackingController.stop()
+            resolvePendingPermissionRequestAsCancelled()
+            result.success(null)
+            return
+        }
+
+        orientationController.stop()
+
+        if (!faceTrackingController.isSupported) {
+            result.error(
+                "face_tracking_unavailable",
+                "MediaPipe face tracking requires Android 7.0 (API 24) or newer",
+                null,
+            )
+            return
+        }
+
+        val currentActivity = activity
+        if (currentActivity == null) {
+            result.error(
+                "activity_unavailable",
+                "Mimic mode requires a foreground Android Activity",
+                null,
+            )
+            return
+        }
+
+        if (
+            ContextCompat.checkSelfPermission(
+                currentActivity,
+                Manifest.permission.CAMERA,
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            startMimic(currentActivity)
+            result.success(null)
+            return
+        }
+
+        if (pendingMimicPermissionResult != null) {
+            result.error(
+                "permission_request_in_progress",
+                "A camera permission request is already in progress",
+                null,
+            )
+            return
+        }
+
+        pendingMimicPermissionResult = result
+        ActivityCompat.requestPermissions(
+            currentActivity,
+            arrayOf(Manifest.permission.CAMERA),
+            CAMERA_PERMISSION_REQUEST_CODE,
+        )
+    }
+
+    private fun startMimic(currentActivity: Activity) {
+        faceTrackingController.start(currentActivity) {
+            // Startup completion is primarily surfaced through the MethodChannel.
+            // Runtime tracking failures continue through the EventChannel.
+        }
     }
 
     private fun handleLookAt(call: MethodCall, result: MethodChannel.Result) {
@@ -155,8 +245,93 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
         result.success(null)
     }
 
-    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        attachActivity(binding)
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        detachActivity()
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        attachActivity(binding)
+    }
+
+    override fun onDetachedFromActivity() {
+        detachActivity()
+    }
+
+    private fun attachActivity(binding: ActivityPluginBinding) {
+        activityBinding = binding
+        activity = binding.activity
+        binding.addRequestPermissionsResultListener(this)
+    }
+
+    private fun detachActivity() {
+        faceTrackingController.stop()
+        activityBinding?.removeRequestPermissionsResultListener(this)
+        activityBinding = null
+        activity = null
+        resolvePendingPermissionRequestAsCancelled()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ): Boolean {
+        if (requestCode != CAMERA_PERMISSION_REQUEST_CODE) return false
+
+        val pendingResult = pendingMimicPermissionResult
+        pendingMimicPermissionResult = null
+
+        if (pendingResult == null) return true
+
+        val granted = grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            pendingResult.error(
+                "camera_permission_denied",
+                "Camera permission is required for Mimic mode",
+                null,
+            )
+            return true
+        }
+
+        val currentActivity = activity
+        if (currentActivity == null) {
+            pendingResult.error(
+                "activity_unavailable",
+                "Mimic mode requires a foreground Android Activity",
+                null,
+            )
+            return true
+        }
+
+        startMimic(currentActivity)
+        pendingResult.success(null)
+        return true
+    }
+
+    private fun resolvePendingPermissionRequestAsCancelled() {
+        pendingMimicPermissionResult?.error(
+            "camera_permission_cancelled",
+            "Camera permission request was cancelled",
+            null,
+        )
+        pendingMimicPermissionResult = null
+    }
+
+    private fun stopInteractiveInputs() {
         orientationController.stop()
+        faceTrackingController.stop()
+        resolvePendingPermissionRequestAsCancelled()
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        stopInteractiveInputs()
+        faceTrackingController.dispose()
         renderer.dispose()
         methodChannel.setMethodCallHandler(null)
         faceTrackingChannel.setStreamHandler(null)
@@ -170,5 +345,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
         const val FACE_TRACKING_CHANNEL = "pocket_live2d/face_tracking"
         const val ORIENTATION_CHANNEL = "pocket_live2d/orientation"
         const val VIEW_TYPE = "pocket_live2d/view"
+
+        private const val CAMERA_PERMISSION_REQUEST_CODE = 42621
     }
 }
