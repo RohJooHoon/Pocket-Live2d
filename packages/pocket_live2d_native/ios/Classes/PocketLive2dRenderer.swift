@@ -7,6 +7,7 @@ protocol PocketLive2dRenderer: AnyObject {
     func setExpression(expressionId: String)
     func lookAt(x: Double, y: Double)
     func applyOrientation(x: Double, y: Double, z: Double)
+    func applyFaceTracking(_ state: [String: Double])
     func dispose()
 }
 
@@ -18,5 +19,6 @@ final class PendingCubismRenderer: PocketLive2dRenderer {
     func setExpression(expressionId: String) {}
     func lookAt(x: Double, y: Double) {}
     func applyOrientation(x: Double, y: Double, z: Double) {}
+    func applyFaceTracking(_ state: [String: Double]) {}
     func dispose() {}
 }
