@@ -1,0 +1,21 @@
+name: pocket_live2d_native
+description: Native iOS and Android bridge for Pocket Live2D.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.rohjoohoon.pocket_live2d_native
+        pluginClass: PocketLive2dNativePlugin
+      ios:
+        pluginClass: PocketLive2dNativePlugin
