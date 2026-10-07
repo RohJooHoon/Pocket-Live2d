@@ -11,7 +11,27 @@ class CharacterInteractionCoordinator {
   CharacterInputMode get mode => _mode;
 
   Future<void> setMode(CharacterInputMode nextMode) async {
-    switch (nextMode) {
+    if (nextMode == _mode) return;
+
+    final previousMode = _mode;
+
+    try {
+      await _applyMode(nextMode);
+      _mode = nextMode;
+    } catch (_) {
+      try {
+        await _applyMode(previousMode);
+      } catch (_) {
+        // Preserve the original transition error. The caller can decide how to
+        // surface recovery failure while the coordinator keeps its last known
+        // logical mode.
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _applyMode(CharacterInputMode mode) async {
+    switch (mode) {
       case CharacterInputMode.idle:
         await controller.setMimicEnabled(false);
         await controller.setGyroEnabled(false);
@@ -25,7 +45,5 @@ class CharacterInteractionCoordinator {
         await controller.setMimicEnabled(true);
         break;
     }
-
-    _mode = nextMode;
   }
 }
