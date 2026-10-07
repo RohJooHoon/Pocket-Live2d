@@ -9,9 +9,14 @@ import io.flutter.plugin.platform.PlatformView
 internal class PocketLive2dPlatformView(
     context: Context,
     private val creationParams: Map<String, Any?>,
+    private val renderer: PocketLive2dRenderer,
 ) : PlatformView {
     private val rootView = FrameLayout(context).apply {
         setBackgroundColor(resolveBackgroundColor(creationParams["backgroundColor"]))
+    }
+
+    init {
+        modelId?.let(renderer::loadModel)
     }
 
     val modelId: String?
@@ -21,7 +26,8 @@ internal class PocketLive2dPlatformView(
 
     override fun dispose() {
         rootView.removeAllViews()
-        // TODO: Release EGL/Cubism renderer resources owned by this view.
+        // The renderer is plugin-scoped. Surface-specific cleanup will be added
+        // when the Cubism renderer owns an EGL surface for this PlatformView.
     }
 
     private fun resolveBackgroundColor(rawColor: Any?): Int {
