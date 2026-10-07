@@ -5,6 +5,7 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
     typealias State = [String: Double]
 
     private let session = ARSession()
+    private let filter = PocketLive2dFaceTrackingFilter()
     private let onState: (State) -> Void
     private let onError: (String, String) -> Void
 
@@ -35,6 +36,7 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
         configuration.isLightEstimationEnabled = false
         configuration.maximumNumberOfTrackedFaces = 1
 
+        filter.reset()
         session.run(
             configuration,
             options: [.resetTracking, .removeExistingAnchors]
@@ -45,10 +47,12 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
     }
 
     func stop() {
-        guard isRunning else { return }
-        session.pause()
+        if isRunning {
+            session.pause()
+        }
         isRunning = false
         lastEmitTimestamp = 0
+        filter.reset()
     }
 
     func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
@@ -64,9 +68,23 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
         }
         lastEmitTimestamp = timestamp
 
-        let state = makeState(from: faceAnchor)
+        let rawState = faceAnchor.isTracked
+            ? makeState(from: faceAnchor)
+            : neutralState()
+        let state = filter.apply(rawState)
+
         DispatchQueue.main.async { [weak self] in
             self?.onState(state)
+        }
+    }
+
+    func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
+        guard isRunning else { return }
+        guard anchors.contains(where: { $0 is ARFaceAnchor }) else { return }
+
+        filter.reset()
+        DispatchQueue.main.async { [weak self] in
+            self?.onState(self?.neutralState() ?? [:])
         }
     }
 
@@ -130,6 +148,23 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
             "browLeft": clamp01(browLeft),
             "browRight": clamp01(browRight),
             "trackingConfidence": 1.0,
+        ]
+    }
+
+    private func neutralState() -> State {
+        [
+            "headYaw": 0,
+            "headPitch": 0,
+            "headRoll": 0,
+            "eyeBlinkLeft": 0,
+            "eyeBlinkRight": 0,
+            "eyeLookX": 0,
+            "eyeLookY": 0,
+            "mouthOpen": 0,
+            "mouthForm": 0,
+            "browLeft": 0,
+            "browRight": 0,
+            "trackingConfidence": 0,
         ]
     }
 
