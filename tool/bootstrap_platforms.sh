@@ -6,13 +6,24 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-flutter create \
-  --platforms=android,ios \
-  --project-name=pocket_live2d \
-  --org=com.rohjoohoon \
-  .
+cd "$(dirname "$0")/.."
+# Generate only host projects in a temporary app. Never overwrite lib/, test/
+# or pubspec.yaml, and preserve existing native host customizations.
+if [[ ! -d android || ! -d ios ]]; then
+  platform_temp=$(mktemp -d)
+  trap 'rm -rf "$platform_temp"' EXIT
+  flutter create --no-pub --platforms=android,ios \
+    --project-name=pocket_live2d --org=com.rohjoohoon "$platform_temp/host"
+  for platform in android ios; do
+    if [[ ! -d "$platform" ]]; then
+      cp -R "$platform_temp/host/$platform" "$platform"
+    fi
+  done
+  if [[ ! -f .metadata ]]; then
+    cp "$platform_temp/host/.metadata" .metadata
+  fi
+fi
 
 flutter pub get
 flutter test
-
-echo "Platform bootstrap complete. Next: wire the Native Live2D bridge on Android/iOS."
+echo "Platform bootstrap complete. Run flutter run on an iPhone or Android device."

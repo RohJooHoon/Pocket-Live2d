@@ -1,3 +1,6 @@
+import 'native_value.dart';
+
+/// Head angles use degrees. Blink/open/confidence use 0..1; gaze uses -1..1.
 class FaceTrackingState {
   const FaceTrackingState({
     this.headYaw = 0,
@@ -28,7 +31,7 @@ class FaceTrackingState {
   final double trackingConfidence;
 
   factory FaceTrackingState.fromMap(Map<Object?, Object?> map) {
-    double value(String key) => (map[key] as num?)?.toDouble() ?? 0;
+    double value(String key) => nativeValue(map, key);
 
     return FaceTrackingState(
       headYaw: value('headYaw'),

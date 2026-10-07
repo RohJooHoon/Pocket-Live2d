@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  pocket_live2d_native:
+    path: packages/pocket_live2d_native
 
 dev_dependencies:
   flutter_test:

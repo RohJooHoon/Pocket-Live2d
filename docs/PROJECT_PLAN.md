@@ -123,17 +123,17 @@ Body : 0.04
 
 ### 공통 앱
 
-- [ ] Flutter 기반 iOS/Android 앱 Shell
+- [x] Flutter 기반 iOS/Android 앱 Shell
 - [ ] iOS/Android 앱 내부 Live2D 캐릭터 표시
 - [ ] 기기 기울기 → 눈/머리/몸 반응
 - [ ] 터치 위치 바라보기
 - [ ] 캐릭터 터치 → Motion/Expression
 - [ ] 흔들기 → 반응 Motion
-- [ ] `따라하기` 버튼
+- [x] `따라하기` 버튼
 - [ ] 따라하기 ON → 전면 카메라 활성화
 - [ ] 얼굴 방향/눈 깜빡임/입 벌림 추적
 - [ ] 추적값 → 공통 `FaceTrackingState`
-- [ ] `FaceTrackingState` → Live2D Parameter
+- [x] `FaceTrackingState` → Live2D Parameter
 - [ ] 따라하기 OFF → 카메라 즉시 종료
 
 ### Android 추가
@@ -165,8 +165,8 @@ Body : 0.04
 ### Phase A — Flutter + Native Live2D 기반
 
 - [ ] Flutter 프로젝트 생성
-- [ ] iOS/Android Native bridge 구조 결정
-- [ ] 공통 `Live2DController` Dart API 설계
+- [x] iOS/Android Native bridge 구조 결정
+- [x] 공통 `Live2DController` Dart API 설계
 - [ ] Android Native Live2D 샘플 실행
 - [ ] iOS Native Live2D 샘플 실행
 - [ ] Flutter 화면 안에 Native Live2D surface 표시
@@ -178,29 +178,29 @@ Body : 0.04
 
 ### Phase B — 자이로/터치/흔들기
 
-- [ ] iOS orientation 입력
-- [ ] Android Rotation Vector 입력
-- [ ] 플랫폼 값을 공통 `OrientationState`로 정규화
-- [ ] Eye / Head / Body gain 분리
-- [ ] dead zone
-- [ ] smoothing
-- [ ] 터치 위치 → LookAt
+- [x] iOS orientation 입력
+- [x] Android Rotation Vector 입력
+- [x] 플랫폼 값을 공통 `OrientationState`로 정규화
+- [x] Eye / Head / Body gain 분리
+- [x] dead zone
+- [x] smoothing
+- [x] 터치 위치 → LookAt
 - [ ] HitArea 터치 → Motion
-- [ ] drag → 시선 추적
+- [x] drag → 시선 추적
 - [ ] shake gesture 검출
 
 ### Phase C — 따라하기 / Face Tracking
 
-- [ ] Flutter에 `따라하기` 버튼 추가
+- [x] Flutter에 `따라하기` 버튼 추가
 - [ ] 카메라 권한 UX 작성
 - [ ] 따라하기 ON/OFF lifecycle
 - [ ] iOS 얼굴 방향/눈/입 추출
 - [ ] Android 얼굴 landmark/blendshape 엔진 선정
 - [ ] Android 얼굴 방향/눈/입 추출
-- [ ] 공통 `FaceTrackingState` 정의
+- [x] 공통 `FaceTrackingState` 정의
 - [ ] tracking confidence 처리
 - [ ] 얼굴 미검출 시 자연스럽게 Idle 복귀
-- [ ] FaceTracking → Live2D Parameter Mapper
+- [x] FaceTracking → Live2D Parameter Mapper
 - [ ] smoothing / calibration
 - [ ] 저조도/안경/가림 테스트
 - [ ] 장시간 카메라 사용 발열 확인
@@ -251,13 +251,16 @@ ios/
 
 ```dart
 abstract interface class Live2DController {
-  Future<void> initialize();
+  Future<Live2DCapabilities> initialize();
   Future<void> loadModel(String modelId);
   Future<void> playMotion(String group, {int? index});
   Future<void> setExpression(String expressionId);
   Future<void> setMimicEnabled(bool enabled);
   Future<void> setGyroEnabled(bool enabled);
   Future<void> lookAt(double x, double y);
+  Future<void> setParameters(Live2DParameterState state);
+  Future<void> calibrate();
+  Future<void> setActive(bool active);
   Future<void> dispose();
 }
 ```
@@ -275,6 +278,9 @@ setMimicEnabled
 setGyroEnabled
 lookAt
 setWallpaper
+setParameters
+calibrate
+setActive
 ```
 
 ## 11. 카메라/프라이버시 원칙
@@ -293,7 +299,7 @@ setWallpaper
 - [ ] 배포/수익화 라이선스 확인
 - [ ] iOS 얼굴 추적 방식과 지원 기기 범위 검증
 - [ ] Android 얼굴 추적 라이브러리 후보 비교
-- [ ] Flutter PlatformView/Texture/Native Surface 연결 방식 결정
+- [x] Flutter PlatformView/Texture/Native Surface 연결 방식 결정
 - [ ] Android Wallpaper에서 공통 Live2D 코드 재사용 구조 결정
 
 ### Sprint 1 — Cross-platform Live2D
@@ -304,7 +310,7 @@ setWallpaper
 - [ ] 동일 모델 로드
 - [ ] Motion API
 - [ ] Expression API
-- [ ] Flutter controller API 정리
+- [x] Flutter controller API 정리
 
 ### Sprint 2 — Interaction
 
@@ -312,10 +318,10 @@ setWallpaper
 - [ ] Eye
 - [ ] Head
 - [ ] Body
-- [ ] Touch LookAt
+- [x] Touch LookAt
 - [ ] HitArea
 - [ ] Shake
-- [ ] smoothing
+- [x] smoothing
 - [ ] calibration
 
 ### Sprint 3 — 따라하기
@@ -323,10 +329,10 @@ setWallpaper
 - [ ] 전면 카메라
 - [ ] iOS Face Tracking
 - [ ] Android Face Tracking
-- [ ] FaceTrackingState
-- [ ] Head mapping
-- [ ] Blink mapping
-- [ ] Mouth mapping
+- [x] FaceTrackingState
+- [x] Head mapping
+- [x] Blink mapping
+- [x] Mouth mapping
 - [ ] Expression mapping
 - [ ] 얼굴 미검출 처리
 - [ ] 카메라 lifecycle
@@ -405,3 +411,39 @@ Live Wallpaper
 - Android Live Wallpaper sample: https://github.com/Live2D/CubismAndroidLiveWallpaper
 
 Cubism Core 바이너리는 공식 SDK 배포 패키지 기준으로 관리하며 저장소에는 커밋하지 않는다.
+
+
+## 16. 진행 현황 — 2026-10-07
+
+체크된 항목은 코드 구현 기준이다. 실기기 완료 조건(13절)은 실제 모델과
+센서 검증 전까지 체크하지 않는다. Flutter host 프로젝트는 bootstrap으로 생성한다.
+`따라하기` UI는 표시하되 비활성화되어 있으며 카메라 기능은 아직 구현하지 않았다.
+FaceTracking parameter mapper도 현재는 공통 데이터 변환만 구현했다.
+
+### 이번 구현
+
+- [x] path dependency 기반 Android/iOS native plugin 자동 등록
+- [x] MethodChannel/EventChannel 및 capability 응답
+- [x] Android View / iOS UIView 진단 surface
+- [x] Android rotation quaternion / iOS deviceMotion 입력
+- [x] baseline calibration 및 -1..1 정규화
+- [x] 터치/드래그 입력과 기울기 입력 우선순위
+- [x] dead zone, 부위별 보간, 30Hz 입력 업데이트
+- [x] foreground/stream cancel/dispose 센서 수명 관리
+- [x] native 실패 시 UI 토글 상태 보존
+- [x] 느린 native 응답에 대한 최신값 병합
+- [x] 기존 앱/host 파일을 보존하는 bootstrap
+- [x] Flutter/JVM/Shell 회귀 테스트 및 GitHub Actions 구성
+
+### 다음 순서
+
+1. [ ] Cubism 공식 SDK/Core 설치 및 테스트 모델 확보; 사용/배포 권한 확인
+2. [ ] Android/iOS 실제 renderer와 model loader 연결 — Phase A 완료 조건 충족
+3. [ ] Motion/Expression/HitArea와 shake 검출 추가
+4. [ ] 실제 iPhone/Galaxy에서 축 방향, 재보정, background 복귀 검증
+5. [ ] iOS 얼굴 추적 지원 범위와 Android 엔진 선정 후 따라하기 구현
+6. [ ] Wallpaper용 native 공통 mapper/loader와 WallpaperService 구현
+7. [ ] 실제 배터리·발열·추적 품질 검증
+
+구현 계약과 연결 지점: [`NATIVE_BRIDGE.md`](NATIVE_BRIDGE.md).
+검증 결과와 실행 방법은 README의 현재 상태 및 검증 절을 확인한다.

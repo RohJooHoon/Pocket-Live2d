@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 
 import 'live2d_controller.dart';
 import 'models/face_tracking_state.dart';
+import 'models/live2d_capabilities.dart';
+import 'models/live2d_parameter_state.dart';
 import 'models/orientation_state.dart';
 
 final class Live2DMethodChannel implements Live2DController {
@@ -29,19 +31,20 @@ final class Live2DMethodChannel implements Live2DController {
       _faceTrackingStates ??= _faceTrackingChannel
           .receiveBroadcastStream()
           .where((event) => event is Map)
-          .map((event) => FaceTrackingState.fromMap(event as Map<Object?, Object?>))
-          .asBroadcastStream();
+          .map((event) => FaceTrackingState.fromMap(event as Map<Object?, Object?>));
 
   @override
   Stream<OrientationState> get orientationStates =>
       _orientationStates ??= _orientationChannel
           .receiveBroadcastStream()
           .where((event) => event is Map)
-          .map((event) => OrientationState.fromMap(event as Map<Object?, Object?>))
-          .asBroadcastStream();
+          .map((event) => OrientationState.fromMap(event as Map<Object?, Object?>));
 
   @override
-  Future<void> initialize() => _methodChannel.invokeMethod<void>('initialize');
+  Future<Live2DCapabilities> initialize() async {
+    final map = await _methodChannel.invokeMapMethod<Object?, Object?>('initialize');
+    return Live2DCapabilities.fromMap(map ?? const {});
+  }
 
   @override
   Future<void> loadModel(String modelId) =>
@@ -71,6 +74,17 @@ final class Live2DMethodChannel implements Live2DController {
   @override
   Future<void> lookAt(double x, double y) =>
       _methodChannel.invokeMethod<void>('lookAt', {'x': x, 'y': y});
+
+  @override
+  Future<void> setParameters(Live2DParameterState state) =>
+      _methodChannel.invokeMethod<void>('setParameters', state.toMap());
+
+  @override
+  Future<void> calibrate() => _methodChannel.invokeMethod<void>('calibrate');
+
+  @override
+  Future<void> setActive(bool active) =>
+      _methodChannel.invokeMethod<void>('setActive', {'active': active});
 
   @override
   Future<void> dispose() => _methodChannel.invokeMethod<void>('dispose');
