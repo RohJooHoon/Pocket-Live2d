@@ -13,7 +13,7 @@ pocket_live2d/view
 Flutter widget:
 
 ```dart
-Live2DView(modelId: 'haru')
+Live2DView(modelId: 'mark')
 ```
 
 ### creationParams
@@ -37,7 +37,8 @@ pocket_live2d/live2d
 
 #### `initialize`
 
-Native Live2D 런타임을 초기화합니다.
+SDK 설치 여부를 확인합니다. SDK가 없으면 `sdk_unavailable` 오류를 반환합니다.
+모델 준비 완료는 별도 status 이벤트로 확인합니다.
 
 Arguments: 없음
 
@@ -45,7 +46,7 @@ Arguments: 없음
 
 ```json
 {
-  "modelId": "haru"
+  "modelId": "mark"
 }
 ```
 
@@ -99,7 +100,17 @@ Android Wallpaper에서는 이 API를 호출해 카메라를 켜지 않습니다
 }
 ```
 
-범위는 각각 `-1.0 ... 1.0`입니다.
+범위는 각각 `-1.0 ... 1.0`입니다. 선택 인자 `active`의 기본값은 true입니다.
+`active:false`는 touch override를 해제해 gyro/idle 입력을 복원합니다.
+
+#### `tapAt`
+
+`{"x":0.5,"y":-0.2}`를 전달합니다. LookAt과 같은 정규화 좌표로 HitArea를 검사하고 TapBody를 호출합니다.
+
+#### `setWallpaper`
+
+Android에서 `{"modelId":"mark"}`로 시스템 Live Wallpaper 미리보기/설정 화면을 엽니다.
+iOS는 `unsupported_platform`을 반환합니다. 호출 성공은 사용자가 배경화면을 적용했다는 의미가 아닙니다.
 
 #### `dispose`
 
@@ -229,3 +240,14 @@ FPS / Battery Policy
 ```
 
 카메라 얼굴 추적은 Wallpaper에 포함하지 않습니다.
+
+## 8. EventChannel — Renderer Status
+
+`pocket_live2d/status`는 `{state,modelId,message?}` 형태의 이벤트를 전달한다.
+state는 loading, loaded, sdk_unavailable, error 중 하나다.
+모션/표정/배경화면 UI는 loaded 이후에 활성화한다.
+loadModel 메서드 응답은 작업 요청 수락이며 실제 성공은 loaded 이벤트로 확인한다.
+
+카메라 세션 시작 후의 런타임 오류는 face_tracking EventChannel 오류로 전달한다.
+시작 단계의 Android 실패는 setMimicEnabled 호출 오류로 전달한다.
+Flutter는 런타임 오류를 받으면 모드를 idle로 되돌리고 Native 입력을 중지한다.

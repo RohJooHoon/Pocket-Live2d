@@ -52,16 +52,16 @@ ARKit face tracking이 지원되지 않는 기기에서는 `face_tracking_unavai
 
 ## Android
 
-Android 구현은 MediaPipe Face Landmarker를 기준으로 설계합니다.
+Android는 CameraX 전면 카메라의 RGBA 프레임을 MediaPipe Face Landmarker LIVE_STREAM 모드로 처리한다.
+blendshapes와 facial transformation matrix를 공통 얼굴 상태로 정규화한다.
+Gradle이 공식 Face Landmarker task 모델을 내려받아 Native asset에 포함한다.
 
-필요 출력:
+행/픽셀 stride를 반영해 프레임을 읽고 session token으로 종료된 세션의 결과를 차단한다.
+카메라 binding 완료 후 setMimicEnabled(true)에 성공을 응답한다.
+권한 대기/시작 중 OFF 또는 background 전환은 pending 요청을 취소한다.
+Android 7.0(API 24) 미만에서는 face_tracking_unavailable을 반환한다.
 
-- face blendshapes
-- facial transformation matrix
-- live stream mode
-- single face tracking
-
-모델 파일과 Android dependency를 연결한 뒤 CameraX 프레임을 Face Landmarker에 전달합니다.
+두 플랫폼 모두 실기기 정확도·가림·저조도·장시간 발열 검증이 아직 필요하다.
 
 ## Privacy
 

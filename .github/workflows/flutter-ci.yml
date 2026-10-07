@@ -30,8 +30,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Check setup script syntax
+        run: python3 -m py_compile tool/*.py
+
       - name: Validate bundled Live2D model
         run: python3 tool/validate_model_assets.py
+
+      - name: Test native input filtering
+        run: g++ -std=c++17 -Wall -Wextra -Werror test/native/input_test.cpp -o /tmp/pocket-input-test && /tmp/pocket-input-test
 
       - name: Analyze
         run: flutter analyze

@@ -7,6 +7,8 @@ import 'package:pocket_live2d/live2d/models/orientation_state.dart';
 
 class _FakeLive2DController implements Live2DController {
   final List<Offset> lookAtCalls = [];
+  final List<bool> activeCalls = [];
+  final List<Offset> tapCalls = [];
 
   @override
   Stream<FaceTrackingState> get faceTrackingStates =>
@@ -23,9 +25,16 @@ class _FakeLive2DController implements Live2DController {
   Future<void> loadModel(String modelId) async {}
 
   @override
-  Future<void> lookAt(double x, double y) async {
+  Future<void> lookAt(double x, double y, {bool active = true}) async {
     lookAtCalls.add(Offset(x, y));
+    activeCalls.add(active);
   }
+
+  @override
+  Future<void> tapAt(double x, double y) async { tapCalls.add(Offset(x, y)); }
+
+  @override
+  Future<void> setWallpaper({String modelId = 'mark'}) async {}
 
   @override
   Future<void> playMotion(String group, {int? index}) async {}
@@ -105,6 +114,8 @@ void main() {
 
     expect(controller.lookAtCalls, contains(const Offset(1, 1)));
     expect(controller.lookAtCalls.last, Offset.zero);
+    expect(controller.activeCalls.last, isFalse);
+    expect(controller.tapCalls, isEmpty);
   });
 
   testWidgets('disabling touch resets the current target', (tester) async {
@@ -151,4 +162,19 @@ void main() {
 
     await gesture.cancel();
   });
+  testWidgets('short tap dispatches a normalized hit and releases touch', (tester) async {
+    final controller = _FakeLive2DController();
+    await tester.pumpWidget(MaterialApp(home: Center(child: SizedBox(
+      width: 200, height: 100,
+      child: LookAtGestureSurface(controller: controller,
+        child: const ColoredBox(color: Colors.transparent)),
+    ))));
+    final origin = tester.getTopLeft(find.byType(LookAtGestureSurface));
+    final gesture = await tester.startGesture(origin + const Offset(150, 25));
+    await gesture.up();
+    await tester.pump();
+    expect(controller.tapCalls, [const Offset(.5, .5)]);
+    expect(controller.activeCalls, [true, false]);
+  });
+
 }

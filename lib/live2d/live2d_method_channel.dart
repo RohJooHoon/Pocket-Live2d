@@ -71,8 +71,21 @@ final class Live2DMethodChannel implements Live2DController {
       _methodChannel.invokeMethod<void>('setGyroEnabled', {'enabled': enabled});
 
   @override
-  Future<void> lookAt(double x, double y) =>
-      _methodChannel.invokeMethod<void>('lookAt', {'x': x, 'y': y});
+  Future<void> lookAt(double x, double y, {bool active = true}) =>
+      _methodChannel.invokeMethod<void>('lookAt', {'x': x, 'y': y, if (!active) 'active': false});
+
+  Stream<Map<Object?, Object?>> get rendererStates => const EventChannel(
+        'pocket_live2d/status',
+      ).receiveBroadcastStream().where((event) => event is Map)
+          .map((event) => Map<Object?, Object?>.from(event as Map));
+
+  @override
+  Future<void> tapAt(double x, double y) =>
+      _methodChannel.invokeMethod<void>('tapAt', {'x': x, 'y': y});
+
+  @override
+  Future<void> setWallpaper({String modelId = 'mark'}) =>
+      _methodChannel.invokeMethod<void>('setWallpaper', {'modelId': modelId});
 
   @override
   Future<void> dispose() => _methodChannel.invokeMethod<void>('dispose');

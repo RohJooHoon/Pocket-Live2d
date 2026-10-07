@@ -48,6 +48,10 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
   Duration? _lastSentAt;
   int? _activePointer;
   bool _disposed = false;
+  Offset? _pointerStart;
+  Offset? _tapTarget;
+  bool _dragged = false;
+  Duration? _pointerStartedAt;
 
   @override
   void didUpdateWidget(covariant LookAtGestureSurface oldWidget) {
@@ -72,11 +76,21 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
   void _handlePointerDown(PointerDownEvent event) {
     if (!widget.enabled || _activePointer != null) return;
     _activePointer = event.pointer;
+    _pointerStart = event.localPosition;
+    _pointerStartedAt = _stopwatch.elapsed;
+    _dragged = false;
+    final box = context.findRenderObject();
+    _tapTarget = box is RenderBox && box.hasSize
+        ? LookAtCoordinates.normalize(event.localPosition, box.size)
+        : null;
     _handlePosition(event.localPosition);
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
     if (!widget.enabled || event.pointer != _activePointer) return;
+    if (_pointerStart != null && (event.localPosition - _pointerStart!).distance > 8) {
+      _dragged = true;
+    }
     _handlePosition(event.localPosition);
   }
 
@@ -84,6 +98,12 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
     if (event.pointer != _activePointer) return;
     _activePointer = null;
     _cancelPending();
+    final tap = _tapTarget;
+    final elapsed = _stopwatch.elapsed - (_pointerStartedAt ?? Duration.zero);
+    if (event is PointerUpEvent && widget.enabled && !_dragged && tap != null &&
+        elapsed < const Duration(milliseconds: 500)) {
+      unawaited(widget.controller.tapAt(tap.dx, tap.dy).catchError((_) {}));
+    }
     if (widget.enabled && widget.resetOnEnd) {
       _send(Offset.zero, force: true);
     }
@@ -131,7 +151,7 @@ class _LookAtGestureSurfaceState extends State<LookAtGestureSurface> {
 
     _lastSentAt = _stopwatch.elapsed;
     unawaited(
-      widget.controller.lookAt(target.dx, target.dy).catchError((_) {}),
+      widget.controller.lookAt(target.dx, target.dy, active: !force).catchError((_) {}),
     );
   }
 

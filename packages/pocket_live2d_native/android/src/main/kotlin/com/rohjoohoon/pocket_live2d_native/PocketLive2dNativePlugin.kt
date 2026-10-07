@@ -2,6 +2,11 @@ package com.rohjoohoon.pocket_live2d_native
 
 import android.Manifest
 import android.app.Activity
+import android.app.WallpaperManager
+import android.content.ComponentName
+import android.content.Intent
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -17,7 +22,8 @@ class PocketLive2dNativePlugin :
     FlutterPlugin,
     MethodChannel.MethodCallHandler,
     ActivityAware,
-    PluginRegistry.RequestPermissionsResultListener {
+    PluginRegistry.RequestPermissionsResultListener,
+    DefaultLifecycleObserver {
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var faceTrackingChannel: EventChannel
@@ -27,7 +33,11 @@ class PocketLive2dNativePlugin :
 
     private val faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private val orientationStreamHandler = PocketLive2dStreamHandler()
-    private val renderer: PocketLive2dRenderer = PendingCubismRenderer()
+    private lateinit var renderer: PocketLive2dCubismRenderer
+    private lateinit var shakeController: PocketLive2dShakeController
+    private val statusStreamHandler = PocketLive2dStreamHandler()
+    private lateinit var statusChannel: EventChannel
+    private var initialized = false
 
     private var activityBinding: ActivityPluginBinding? = null
     private var activity: Activity? = null
@@ -35,6 +45,16 @@ class PocketLive2dNativePlugin :
     private var pendingMimicStartResult: MethodChannel.Result? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        renderer = PocketLive2dCubismRenderer(
+            binding.applicationContext,
+            { path -> binding.flutterAssets.getAssetFilePathByName(path) },
+            statusStreamHandler::emit,
+        )
+        shakeController = PocketLive2dShakeController(binding.applicationContext) {
+            renderer.playMotion("Shake", null)
+        }
+        statusChannel = EventChannel(binding.binaryMessenger, "pocket_live2d/status")
+        statusChannel.setStreamHandler(statusStreamHandler)
         methodChannel = MethodChannel(binding.binaryMessenger, METHOD_CHANNEL)
         methodChannel.setMethodCallHandler(this)
 
@@ -80,9 +100,12 @@ class PocketLive2dNativePlugin :
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        try {
         when (call.method) {
             "initialize" -> {
                 renderer.initialize()
+                initialized = true
+                shakeController.start()
                 result.success(null)
             }
             "loadModel" -> handleLoadModel(call, result)
@@ -91,14 +114,42 @@ class PocketLive2dNativePlugin :
             "setGyroEnabled" -> handleSetGyroEnabled(call, result)
             "setMimicEnabled" -> handleSetMimicEnabled(call, result)
             "lookAt" -> handleLookAt(call, result)
+            "tapAt" -> {
+                val x = call.argument<Number>("x")?.toDouble()
+                val y = call.argument<Number>("y")?.toDouble()
+                require(x != null && y != null) { "x and y are required" }
+                renderer.tapAt(x, y)
+                result.success(null)
+            }
+            "setWallpaper" -> {
+                val current = requireNotNull(activity) { "A foreground Activity is required" }
+                require(PocketCubismJni.available()) { "Cubism SDK/Core is not installed" }
+                val model = call.argument<String>("modelId") ?: "mark"
+                require(model.matches(Regex("[a-zA-Z0-9_-]+"))) { "Invalid modelId" }
+                current.getSharedPreferences("pocket_live2d", Activity.MODE_PRIVATE).edit()
+                    .putString("wallpaper_model", model).commit()
+                val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).putExtra(
+                    WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                    ComponentName(current, PocketLive2dWallpaperService::class.java),
+                )
+                current.startActivity(intent)
+                result.success(null)
+            }
             "dispose" -> {
                 stopInteractiveInputs()
+                shakeController.stop()
+                initialized = false
                 renderer.dispose()
                 faceTrackingStreamHandler.clear()
                 orientationStreamHandler.clear()
                 result.success(null)
             }
             else -> result.notImplemented()
+        }
+        } catch (error: IllegalArgumentException) {
+            result.error("invalid_argument", error.message, null)
+        } catch (error: Exception) {
+            result.error(if (error.message?.contains("sdk_unavailable") == true) "sdk_unavailable" else "native_error", error.message, null)
         }
     }
 
@@ -144,10 +195,15 @@ class PocketLive2dNativePlugin :
 
         if (!enabled) {
             orientationController.stop()
+            renderer.resetInput()
             result.success(null)
             return
         }
 
+        if ((activity as? LifecycleOwner)?.lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) != true) {
+            result.error("app_in_background", "Interactive inputs require a foreground app", null)
+            return
+        }
         faceTrackingController.stop()
 
         if (!orientationController.isSupported) {
@@ -180,11 +236,16 @@ class PocketLive2dNativePlugin :
 
         if (!enabled) {
             faceTrackingController.stop()
+            renderer.resetInput()
             resolvePendingPermissionRequestAsCancelled()
             result.success(null)
             return
         }
 
+        if ((activity as? LifecycleOwner)?.lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) != true) {
+            result.error("app_in_background", "Interactive inputs require a foreground app", null)
+            return
+        }
         orientationController.stop()
 
         if (!faceTrackingController.isSupported) {
@@ -253,7 +314,7 @@ class PocketLive2dNativePlugin :
             return
         }
 
-        renderer.lookAt(x.coerceIn(-1.0, 1.0), y.coerceIn(-1.0, 1.0))
+        renderer.lookAt(x.coerceIn(-1.0, 1.0), y.coerceIn(-1.0, 1.0), call.argument<Boolean>("active") ?: true)
         result.success(null)
     }
 
@@ -277,10 +338,14 @@ class PocketLive2dNativePlugin :
         activityBinding = binding
         activity = binding.activity
         binding.addRequestPermissionsResultListener(this)
+        (binding.activity as? LifecycleOwner)?.lifecycle?.addObserver(this)
     }
 
     private fun detachActivity() {
         stopInteractiveInputs()
+        shakeController.stop()
+        renderer.setPaused(true)
+        (activity as? LifecycleOwner)?.lifecycle?.removeObserver(this)
         activityBinding?.removeRequestPermissionsResultListener(this)
         activityBinding = null
         activity = null
@@ -338,15 +403,29 @@ class PocketLive2dNativePlugin :
         pendingMimicPermissionResult = null
     }
 
+    override fun onStop(owner: LifecycleOwner) {
+        stopInteractiveInputs()
+        shakeController.stop()
+        renderer.setPaused(true)
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        renderer.setPaused(false)
+        if (initialized) shakeController.start()
+    }
+
     private fun stopInteractiveInputs() {
         orientationController.stop()
         faceTrackingController.stop()
+        renderer.resetInput()
         resolvePendingPermissionRequestAsCancelled()
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         stopInteractiveInputs()
         faceTrackingController.dispose()
+        shakeController.stop()
+        statusChannel.setStreamHandler(null)
         renderer.dispose()
         methodChannel.setMethodCallHandler(null)
         faceTrackingChannel.setStreamHandler(null)
