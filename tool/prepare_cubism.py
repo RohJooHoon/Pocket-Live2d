@@ -27,6 +27,15 @@ destination = plugin / "cubism"
 destination.mkdir(parents=True, exist_ok=True)
 for name in ("Core", "Framework"):
     shutil.copytree(source / name, destination / name, dirs_exist_ok=True)
+# Official OpenGL keeps one shader singleton. Wallpaper preview and installed
+# Engines run on separate GLSurfaceView threads with separate EGL contexts.
+# Keep each thread's GPU programs separate; Runtime serializes Framework access.
+shader_cpp = destination / "Framework/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp"
+shader_source = shader_cpp.read_text(encoding="utf-8-sig")
+singleton = "CubismShader_OpenGLES2* s_instance;"
+if singleton not in shader_source:
+    raise SystemExit("Unsupported Framework shader singleton; use Native 5-r.5.")
+shader_cpp.write_text(shader_source.replace(singleton, "thread_local " + singleton), encoding="utf-8")
 include = destination / "include"
 include.mkdir(exist_ok=True)
 shutil.copy2(required[2], include / "stb_image.h")

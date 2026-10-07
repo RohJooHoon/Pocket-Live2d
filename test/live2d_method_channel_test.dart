@@ -64,4 +64,14 @@ void main() {
     expect(calls.single.method, 'playMotion');
     expect(calls.single.arguments, {'group': 'Idle'});
   });
+  test('serializes touch release, hit test and wallpaper request', () async {
+    await controller.lookAt(0, 0, active: false);
+    await controller.tapAt(.5, -.25);
+    await controller.setWallpaper();
+    expect(calls.map((call) => call.method), ['lookAt', 'tapAt', 'setWallpaper']);
+    expect(calls[0].arguments, {'x': 0.0, 'y': 0.0, 'active': false});
+    expect(calls[1].arguments, {'x': .5, 'y': -.25});
+    expect(calls[2].arguments, {'modelId': 'mark'});
+  });
+
 }

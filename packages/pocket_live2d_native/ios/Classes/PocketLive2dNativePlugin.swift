@@ -95,6 +95,14 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
         )
     }
 
+    deinit {
+        notifications.forEach { NotificationCenter.default.removeObserver($0) }
+        orientationController.stop()
+        faceTrackingController.stop()
+        shakeController.stop()
+        renderer?.dispose()
+    }
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "initialize":
@@ -147,9 +155,9 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
         guard
             let args = call.arguments as? [String: Any],
             let modelId = args["modelId"] as? String,
-            !modelId.isEmpty
+            modelId.range(of: "^[a-zA-Z0-9_-]+$", options: .regularExpression) != nil
         else {
-            result(invalidArgument("modelId is required"))
+            result(invalidArgument("A valid modelId is required"))
             return
         }
 

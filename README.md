@@ -1,40 +1,46 @@
 # Pocket Live2D
 
-Flutter 기반의 iOS/Android 인터랙티브 Live2D 캐릭터 앱입니다.
+Flutter 기반 iOS/Android Live2D 캐릭터 앱과 Android Live Wallpaper입니다.
 
-- iOS / Android 앱: Live2D 캐릭터, 자이로, 터치, 흔들기, 전면 카메라 얼굴 따라하기
-- Android 추가 기능: 동일 캐릭터를 실제 Live Wallpaper로 사용
-- Flutter: 제품 UI와 공통 상태/설정
-- Native: Live2D 렌더링, 얼굴 추적, 플랫폼 센서/카메라, Android WallpaperService
+- Flutter: 입력 모드, 모델 상태, 모션/표정 버튼, 배경화면 설정 진입
+- Native: OpenGL ES Cubism 렌더러, 자이로/터치/흔들기, 얼굴 추적
+- Android 얼굴 추적: CameraX + MediaPipe Face Landmarker
+- iOS 얼굴 추적: ARKit
+- Wallpaper: 공통 C++ 모델/파라미터 런타임 재사용, 카메라 없음
 
 ## 현재 상태
 
-프로젝트 부트스트랩 단계입니다.
+공식 테스트 모델 **Mark**와 렌더러 연결 코드를 포함합니다. Cubism Core는 별도로 설치해야 합니다.
+SDK가 없는 빌드는 `sdk_unavailable` 상태를 표시하며 캐릭터를 렌더링하지 않습니다.
+공개 CI는 SDK 없는 Flutter/Android/iOS 빌드 경로와 입력·모델 무결성 테스트를 검증합니다.
+SDK를 넣은 전체 빌드와 실제 iPhone/Galaxy 동작 검증은 아직 필요합니다.
 
-1. Flutter 공통 앱 골격
-2. Flutter ↔ Native Live2D bridge 계약
-3. iOS/Android Native Live2D surface 연결
-4. Gyro / Touch / Shake
-5. Face Tracking (`따라하기`)
-6. Android Live Wallpaper
-
-상세 계획은 [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)를 참고합니다.
-
-## 개발 원칙
-
-- Live2D 렌더링을 Flutter 위젯으로 재구현하지 않고 플랫폼 Native renderer를 사용합니다.
-- 플랫폼별 센서/얼굴 추적 결과는 공통 상태 모델로 정규화합니다.
-- Android Wallpaper에서는 카메라를 사용하지 않습니다.
-- Cubism Core 바이너리는 저장소에 커밋하지 않습니다. 공식 Live2D SDK 배포 패키지를 사용합니다.
+진행 순서와 남은 검증은 [개발 계획](docs/PROJECT_PLAN.md), 설치 방법은
+[Cubism SDK 설정](docs/CUBISM_SDK_SETUP.md)을 참고하세요.
 
 ## 시작하기
 
-Flutter SDK가 설치된 개발 환경에서 플랫폼 폴더를 생성합니다.
+Flutter stable, Android SDK/NDK 또는 macOS Xcode/CocoaPods가 필요합니다.
 
 ```bash
-./tool/bootstrap_platforms.sh
-flutter pub get
+bash tool/bootstrap_platforms.sh
+python3 tool/validate_model_assets.py
+flutter analyze
 flutter test
 ```
 
-> Native Live2D SDK 연결 전까지는 Flutter shell과 bridge 계약만 동작합니다.
+캐릭터 렌더링을 활성화하려면 공식 Cubism SDK for Native 5-r.5를 다운로드·압축 해제한 후:
+
+```bash
+python3 tool/prepare_cubism.py /path/to/CubismSdkForNative-5-r.5
+bash tool/bootstrap_platforms.sh
+flutter run
+```
+
+iOS는 macOS에서 SDK를 준비해야 합니다. 상세 빌드 명령과 기기 검증 절차는 설치 문서를 참고하세요.
+
+## 테스트 데이터
+
+`assets/live2d/mark/`에 moc3, texture, physics, 6개 모션과 테스트 표정 2개가 있습니다.
+모델 출처와 사용 조건은 [모델 README](assets/live2d/mark/README.md)에 기록되어 있습니다.
+다른 모델과 민감도를 선택하는 설정 UI는 후속 작업입니다.

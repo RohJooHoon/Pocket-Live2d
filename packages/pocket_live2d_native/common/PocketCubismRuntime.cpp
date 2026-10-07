@@ -34,7 +34,7 @@ public:
 };
 Allocator allocator;
 CubismFramework::Option options;
-std::mutex frameworkLock;
+std::recursive_mutex frameworkLock;
 unsigned references = 0;
 csmByte* readShader(const std::string path, csmSizeInt* size) {
     const auto slash = path.find_last_of('/');
@@ -47,7 +47,7 @@ csmByte* readShader(const std::string path, csmSizeInt* size) {
     return bytes;
 }
 void acquireFramework() {
-    std::lock_guard<std::mutex> lock(frameworkLock);
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock);
     if (references++ == 0) {
         options.LoadFileFunction = readShader;
         options.ReleaseBytesFunction = [](csmByte* p) { delete[] p; };
@@ -60,7 +60,7 @@ void acquireFramework() {
     }
 }
 void releaseFramework() {
-    std::lock_guard<std::mutex> lock(frameworkLock);
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock);
     if (--references == 0) {
         Rendering::CubismShader_OpenGLES2::DeleteInstance();
         CubismFramework::Dispose();
@@ -215,36 +215,51 @@ public:
     Reader read;
     std::unique_ptr<Model> model;
     explicit Impl(Reader r) : read(std::move(r)) { acquireFramework(); }
-    ~Impl() { model.reset(); releaseFramework(); }
+    ~Impl() {
+        std::lock_guard<std::recursive_mutex> lock(frameworkLock);
+        model.reset();
+        // Shader programs belong to the current GL thread/context.
+        Rendering::CubismShader_OpenGLES2::DeleteInstance();
+        releaseFramework();
+    }
 };
 bool Runtime::available() { return true; }
 Runtime::Runtime(Reader reader) : impl(new Impl(std::move(reader))) {}
 Runtime::~Runtime() = default;
 void Runtime::load(const std::string& path, int w, int h) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock);
     auto next = std::unique_ptr<Model>(new Model());
     next->load(impl->read, path, w, h);
     impl->model = std::move(next);
 }
-void Runtime::resize(int w, int h) { if (impl->model) impl->model->resize(w,h); }
-void Runtime::draw(float dt) { if (impl->model) { impl->model->update(dt); impl->model->draw(); } }
+void Runtime::resize(int w, int h) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock); if (impl->model) impl->model->resize(w,h); }
+void Runtime::draw(float dt) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock); if (impl->model) { impl->model->update(dt); impl->model->draw(); } }
 void Runtime::motion(const std::string& group, int index) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock);
     if (!impl->model) throw std::runtime_error("Model is not loaded");
     impl->model->play(group,index,3);
 }
 void Runtime::expression(const std::string& name) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock);
     if (!impl->model) throw std::runtime_error("Model is not loaded");
     auto found = impl->model->expressions.find(name);
     if (found == impl->model->expressions.end()) throw std::runtime_error("Unknown expression: " + name);
-    impl->model->GetModel(); // Keep access validation with the loaded model.
     impl->model->setExpression(found->second);
 }
-void Runtime::tap(float x,float y) { if (impl->model) impl->model->tap(x,y); }
-void Runtime::orientation(float x,float y,float z) { if (impl->model) impl->model->input.orientation(x,y,z); }
-void Runtime::face(const std::array<float,12>& data) { if (impl->model) impl->model->input.face(data); }
+void Runtime::tap(float x,float y) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock); if (impl->model) impl->model->tap(x,y); }
+void Runtime::orientation(float x,float y,float z) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock); if (impl->model) impl->model->input.orientation(x,y,z); }
+void Runtime::face(const std::array<float,12>& data) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock); if (impl->model) impl->model->input.face(data); }
 void Runtime::look(float x,float y,bool active) {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock);
     if (impl->model) { impl->model->input.touch = active; impl->model->input.touchX=x; impl->model->input.touchY=y; }
 }
-void Runtime::reset() { if (impl->model) impl->model->input=Input(); }
+void Runtime::reset() {
+    std::lock_guard<std::recursive_mutex> lock(frameworkLock); if (impl->model) impl->model->input=Input(); }
 }
 #else
 namespace pocket {
