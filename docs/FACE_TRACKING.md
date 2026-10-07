@@ -1,6 +1,6 @@
 # Mimic / Face Tracking
 
-Pocket Live2D의 `따라하기(Mimic)` 모드는 전면 카메라에서 얼굴 움직임을 추적한 뒤 공통 `FaceTrackingState` 형태로 정규화합니다.
+MotionMate의 `따라하기(Mimic)` 모드는 전면 카메라에서 얼굴 움직임을 추적한 뒤 공통 `FaceTrackingState` 형태로 정규화합니다.
 
 ## 공통 출력
 

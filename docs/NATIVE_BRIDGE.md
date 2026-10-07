@@ -1,6 +1,6 @@
 # Native Bridge Contract
 
-Pocket Live2D의 Flutter 계층과 iOS/Android Native 계층 사이의 계약입니다.
+MotionMate의 Flutter 계층과 iOS/Android Native 계층 사이의 계약입니다.
 
 ## 1. PlatformView
 

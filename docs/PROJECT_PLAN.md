@@ -1,4 +1,4 @@
-# Pocket Live2D 개발 계획과 진행 상태
+# MotionMate 개발 계획과 진행 상태
 
 목표: iPhone/Android 앱에서 자이로·터치·흔들기·얼굴 따라하기에 반응하는 Live2D 캐릭터를 제공하고,
 Android 홈 화면에서는 같은 모델을 Live Wallpaper로 사용한다.
@@ -77,10 +77,12 @@ MVP 완료는 iPhone/Galaxy 실제 표시와 상호작용, 카메라 즉시 종�
 ## 구조
 
 - `lib/live2d/`: Controller, bridge, 입력 모드, Flutter 상태 모델
+- `lib/legal/`: 첫 실행 약관 동의 화면, 약관·방침 보기 화면
 - `packages/pocket_live2d_native/common/`: 공통 Cubism 런타임과 입력 보간
 - `packages/pocket_live2d_native/android/`: Kotlin/JNI, CameraX/MediaPipe, wallpaper
 - `packages/pocket_live2d_native/ios/`: Swift/Objective-C++, ARKit/Core Motion
 - `assets/live2d/mark/`: 공식 테스트 모델과 테스트 표정
+- `assets/legal/`: 이용약관, 개인정보처리방침 (앱과 저장소가 같은 파일 사용)
 - `tool/`: 호스트 구성, SDK 준비, 모델 검사
 
-[Native bridge 계약](NATIVE_BRIDGE.md) · [얼굴 추적](FACE_TRACKING.md) · [실기기 실행·테스트](DEVICE_TESTING.md)
+[Native bridge 계약](NATIVE_BRIDGE.md) · [얼굴 추적](FACE_TRACKING.md) · [실기기 실행·테스트](DEVICE_TESTING.md) · [라이선스와 출시 준비](LICENSING.md)

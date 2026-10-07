@@ -1,6 +1,10 @@
-# Pocket Live2D
+# MotionMate
 
-Flutter 기반 iOS/Android Live2D 캐릭터 앱과 Android Live Wallpaper입니다.
+Flutter 기반 iOS/Android 인터랙티브 캐릭터 앱과 Android Live Wallpaper입니다.
+캐릭터 렌더링에는 Live2D Cubism SDK를 사용합니다.
+
+> 이전 작업명은 Pocket Live2D였습니다. Live2D 약관상 앱 이름에 Live2D 상표를 쓸 수 없어 MotionMate로 바꿨습니다.
+> 저장소 이름(Pocket-Live2d)과 내부 코드 이름(`pocket_live2d_native`, 채널 이름 등)은 사용자에게 보이지 않아 그대로 둡니다.
 
 - Flutter: 입력 모드, 모델 상태, 모션/표정 버튼, 배경화면 설정 진입
 - Native: OpenGL ES Cubism 렌더러, 자이로/터치/흔들기, 얼굴 추적
@@ -68,3 +72,11 @@ flutter test
 `assets/live2d/mark/`에 moc3, texture, physics, 6개 모션과 테스트 표정 2개가 있습니다.
 모델 출처와 사용 조건은 [모델 README](assets/live2d/mark/README.md)에 기록되어 있습니다.
 다른 모델과 민감도를 선택하는 설정 UI는 후속 작업입니다.
+
+## 이용약관·개인정보처리방침과 출시 준비
+
+- [이용약관](assets/legal/terms_of_service.md): Live2D Cubism Core 보호 조항 포함
+- [개인정보처리방침](assets/legal/privacy_policy.md): 카메라·얼굴 데이터는 기기 안에서만 처리
+- [라이선스와 출시 준비](docs/LICENSING.md): Live2D 약관 판단, 출시 체크리스트, 유료화 검토
+
+앱은 첫 실행 때 약관과 방침에 대한 동의를 받고, 정보(ⓘ) 화면에서 두 문서를 다시 볼 수 있습니다.
