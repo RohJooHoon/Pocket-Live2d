@@ -1,7 +1,8 @@
 # Cubism Native 5-r.5 설정과 검증
 
 Core는 공식 배포 패키지에서 별도로 설치한다. 저장소에는 Core나 SDK 복사본을 커밋하지 않는다.
-공식 다운로드: https://www.live2d.com/en/sdk/download/native/
+공식 다운로드: https://www.live2d.com/download/cubism-sdk/download-native/
+(링크 출처: [CubismNativeSamples README](https://github.com/Live2D/CubismNativeSamples). 받은 파일명이 `CubismSdkForNative-5-r.5`인지 확인한다.)
 
 ## SDK 준비
 
