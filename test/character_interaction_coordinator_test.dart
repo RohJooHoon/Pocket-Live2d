@@ -7,6 +7,7 @@ import 'package:pocket_live2d/live2d/models/orientation_state.dart';
 
 class _FakeLive2DController implements Live2DController {
   final List<String> calls = [];
+  String? failOnCall;
 
   @override
   Stream<FaceTrackingState> get faceTrackingStates =>
@@ -34,12 +35,22 @@ class _FakeLive2DController implements Live2DController {
       calls.add('setExpression:$expressionId');
 
   @override
-  Future<void> setGyroEnabled(bool enabled) async =>
-      calls.add('gyro:$enabled');
+  Future<void> setGyroEnabled(bool enabled) async {
+    await _record('gyro:$enabled');
+  }
 
   @override
-  Future<void> setMimicEnabled(bool enabled) async =>
-      calls.add('mimic:$enabled');
+  Future<void> setMimicEnabled(bool enabled) async {
+    await _record('mimic:$enabled');
+  }
+
+  Future<void> _record(String call) async {
+    calls.add(call);
+    if (failOnCall == call) {
+      failOnCall = null;
+      throw StateError('forced failure: $call');
+    }
+  }
 
   @override
   Future<void> dispose() async => calls.add('dispose');
@@ -66,13 +77,33 @@ void main() {
     expect(controller.calls, ['gyro:false', 'mimic:true']);
   });
 
-  test('idle mode disables both active input sources', () async {
+  test('idle request is a no-op when already idle', () async {
     final controller = _FakeLive2DController();
     final coordinator = CharacterInteractionCoordinator(controller);
 
     await coordinator.setMode(CharacterInputMode.idle);
 
     expect(coordinator.mode, CharacterInputMode.idle);
-    expect(controller.calls, ['mimic:false', 'gyro:false']);
+    expect(controller.calls, isEmpty);
+  });
+
+  test('failed mimic transition restores the previous gyro mode', () async {
+    final controller = _FakeLive2DController();
+    final coordinator = CharacterInteractionCoordinator(controller);
+
+    await coordinator.setMode(CharacterInputMode.gyro);
+    controller.calls.clear();
+    controller.failOnCall = 'mimic:true';
+
+    await expectLater(
+      coordinator.setMode(CharacterInputMode.mimic),
+      throwsStateError,
+    );
+
+    expect(coordinator.mode, CharacterInputMode.gyro);
+    expect(
+      controller.calls,
+      ['gyro:false', 'mimic:true', 'mimic:false', 'gyro:true'],
+    );
   });
 }
