@@ -12,10 +12,12 @@ internal class PocketLive2dFaceTrackingFilter(
 ) {
     private var previous: Map<String, Double>? = null
 
+    @Synchronized
     fun reset() {
         previous = null
     }
 
+    @Synchronized
     fun apply(input: Map<String, Double>): Map<String, Double> {
         val current = previous
         if (current == null) {
