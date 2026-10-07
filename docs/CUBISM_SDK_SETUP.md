@@ -64,6 +64,8 @@ SDK 일부만 설치되었거나 지원 ABI가 없으면 빌드를 실패시켜 
 
 ## 검증 체크리스트
 
+기기별 실행 방법과 항목별 테스트 절차는 [실기기 실행·테스트 가이드](DEVICE_TESTING.md)를 따른다.
+
 - [ ] SDK 활성 경로 Android/iOS 전체 컴파일과 링크
 - [ ] Mark 표시, texture/mask/physics, TapBody/Shake와 happy/surprised
 - [ ] drag 종료 후 gyro/idle 복원, mimic 동안 touch override 억제
