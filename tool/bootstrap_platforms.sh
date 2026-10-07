@@ -10,6 +10,6 @@ if ! command -v flutter >/dev/null 2>&1; then
 fi
 
 TASK_PLATFORMS="${1:-android,ios}"
-flutter create --platforms="$TASK_PLATFORMS" --project-name=pocket_live2d --org=com.rohjoohoon .
+flutter create --platforms="$TASK_PLATFORMS" --project-name=motionmate --org=com.rohjoohoon .
 python3 tool/configure_hosts.py
 flutter pub get

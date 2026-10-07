@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_live2d/live2d/models/orientation_state.dart';
-import 'package:pocket_live2d/live2d/tracking/orientation_filter.dart';
+import 'package:motionmate/live2d/models/orientation_state.dart';
+import 'package:motionmate/live2d/tracking/orientation_filter.dart';
 
 void main() {
   group('OrientationFilter', () {

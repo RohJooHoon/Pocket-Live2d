@@ -1,4 +1,4 @@
-/// Marker API for the native Pocket Live2D plugin.
+/// Marker API for the native MotionMate plugin.
 ///
 /// The app-facing MethodChannel and PlatformView contracts currently live in
 /// the root application so both layers can evolve independently while the

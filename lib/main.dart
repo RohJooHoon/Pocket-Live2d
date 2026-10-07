@@ -4,25 +4,27 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'legal/legal_consent.dart';
+import 'legal/legal_document.dart';
 import 'live2d/interaction/character_input_mode.dart';
 import 'live2d/interaction/character_interaction_coordinator.dart';
 import 'live2d/interaction/look_at_gesture_surface.dart';
 import 'live2d/live2d_method_channel.dart';
 import 'live2d/live2d_view.dart';
 
-void main() => runApp(const PocketLive2DApp());
+void main() => runApp(const MotionMateApp());
 
-class PocketLive2DApp extends StatelessWidget {
-  const PocketLive2DApp({super.key});
+class MotionMateApp extends StatelessWidget {
+  const MotionMateApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Pocket Live2D',
+        title: 'MotionMate',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff71a888)),
           useMaterial3: true,
         ),
-        home: const CharacterHomePage(),
+        home: const LegalConsentGate(child: CharacterHomePage()),
       );
 }
 
@@ -160,18 +162,24 @@ class _CharacterHomePageState extends State<CharacterHomePage>
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('Pocket Live2D'),
+          title: const Text('MotionMate'),
           actions: [
             IconButton(
               icon: const Icon(Icons.info_outline),
               onPressed: () => showAboutDialog(
                 context: context,
-                applicationName: 'Pocket Live2D',
+                applicationName: 'MotionMate',
                 applicationVersion: '0.1.0',
-                children: const [
-                  Text('This content uses sample data owned and copyrighted by Live2D Inc. '
+                children: [
+                  const Text('This content uses sample data owned and copyrighted by Live2D Inc. '
                       'The sample data are utilized in accordance with terms and conditions set by Live2D Inc. '
                       'This content itself is created at the author’s sole discretion.'),
+                  const SizedBox(height: 12),
+                  for (final document in LegalDocument.values)
+                    TextButton(
+                      onPressed: () => LegalDocumentPage.open(context, document),
+                      child: Text(document.title),
+                    ),
                 ],
               ),
             ),

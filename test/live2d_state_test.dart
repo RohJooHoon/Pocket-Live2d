@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_live2d/live2d/models/face_tracking_state.dart';
-import 'package:pocket_live2d/live2d/models/orientation_state.dart';
+import 'package:motionmate/live2d/models/face_tracking_state.dart';
+import 'package:motionmate/live2d/models/orientation_state.dart';
 
 void main() {
   test('FaceTrackingState parses native values', () {

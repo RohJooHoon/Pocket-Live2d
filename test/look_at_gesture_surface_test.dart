@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_live2d/live2d/interaction/look_at_gesture_surface.dart';
-import 'package:pocket_live2d/live2d/live2d_controller.dart';
-import 'package:pocket_live2d/live2d/models/face_tracking_state.dart';
-import 'package:pocket_live2d/live2d/models/orientation_state.dart';
+import 'package:motionmate/live2d/interaction/look_at_gesture_surface.dart';
+import 'package:motionmate/live2d/live2d_controller.dart';
+import 'package:motionmate/live2d/models/face_tracking_state.dart';
+import 'package:motionmate/live2d/models/orientation_state.dart';
 
 class _FakeLive2DController implements Live2DController {
   final List<Offset> lookAtCalls = [];

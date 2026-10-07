@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_live2d/live2d/interaction/character_input_mode.dart';
-import 'package:pocket_live2d/live2d/interaction/character_interaction_coordinator.dart';
-import 'package:pocket_live2d/live2d/live2d_controller.dart';
-import 'package:pocket_live2d/live2d/models/face_tracking_state.dart';
-import 'package:pocket_live2d/live2d/models/orientation_state.dart';
+import 'package:motionmate/live2d/interaction/character_input_mode.dart';
+import 'package:motionmate/live2d/interaction/character_interaction_coordinator.dart';
+import 'package:motionmate/live2d/live2d_controller.dart';
+import 'package:motionmate/live2d/models/face_tracking_state.dart';
+import 'package:motionmate/live2d/models/orientation_state.dart';
 
 class _FakeLive2DController implements Live2DController {
   final List<String> calls = [];

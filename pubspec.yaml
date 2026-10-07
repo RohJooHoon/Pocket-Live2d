@@ -1,5 +1,5 @@
-name: pocket_live2d
-description: Interactive Live2D character app for iOS and Android with Android live wallpaper support.
+name: motionmate
+description: MotionMate, an interactive character app for iOS and Android with Android live wallpaper support.
 publish_to: none
 version: 0.1.0+1
 
@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   pocket_live2d_native:
     path: packages/pocket_live2d_native
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +26,4 @@ flutter:
     - assets/live2d/mark/Mark.2048/
     - assets/live2d/mark/motions/
     - assets/live2d/mark/expressions/
+    - assets/legal/

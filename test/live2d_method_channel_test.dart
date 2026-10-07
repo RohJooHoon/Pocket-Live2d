@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_live2d/live2d/live2d_method_channel.dart';
+import 'package:motionmate/live2d/live2d_method_channel.dart';
 import 'package:pocket_live2d_native/pocket_live2d_native.dart';
 
 void main() {

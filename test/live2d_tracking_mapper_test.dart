@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_live2d/live2d/models/face_tracking_state.dart';
-import 'package:pocket_live2d/live2d/models/orientation_state.dart';
-import 'package:pocket_live2d/live2d/tracking/live2d_tracking_mapper.dart';
+import 'package:motionmate/live2d/models/face_tracking_state.dart';
+import 'package:motionmate/live2d/models/orientation_state.dart';
+import 'package:motionmate/live2d/tracking/live2d_tracking_mapper.dart';
 
 void main() {
   const mapper = Live2DTrackingMapper();
