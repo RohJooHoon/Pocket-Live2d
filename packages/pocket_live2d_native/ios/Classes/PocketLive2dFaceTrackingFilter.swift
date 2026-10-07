@@ -5,6 +5,7 @@ import Foundation
 /// head motion. Lost tracking eases back toward a neutral pose.
 final class PocketLive2dFaceTrackingFilter {
     private let confidenceThreshold: Double
+    private let lock = NSLock()
     private var previous: [String: Double]?
 
     init(confidenceThreshold: Double = 0.35) {
@@ -12,10 +13,15 @@ final class PocketLive2dFaceTrackingFilter {
     }
 
     func reset() {
+        lock.lock()
         previous = nil
+        lock.unlock()
     }
 
     func apply(_ input: [String: Double]) -> [String: Double] {
+        lock.lock()
+        defer { lock.unlock() }
+
         guard let current = previous else {
             let initial = confidence(input) >= confidenceThreshold
                 ? normalized(input)
