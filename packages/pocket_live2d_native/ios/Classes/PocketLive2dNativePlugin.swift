@@ -10,6 +10,11 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
     private let faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private let orientationStreamHandler = PocketLive2dStreamHandler()
 
+    private lazy var orientationController = PocketLive2dOrientationController {
+        [weak self] event in
+        self?.orientationStreamHandler.emit(event)
+    }
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = PocketLive2dNativePlugin()
 
@@ -54,6 +59,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
         case "lookAt":
             handleLookAt(call, result: result)
         case "dispose":
+            orientationController.stop()
             faceTrackingStreamHandler.clear()
             orientationStreamHandler.clear()
             result(nil)
@@ -113,8 +119,34 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
-        _ = enabled
-        // TODO: Start/stop Core Motion orientation updates.
+        if !enabled {
+            orientationController.stop()
+            result(nil)
+            return
+        }
+
+        guard orientationController.isSupported else {
+            result(
+                FlutterError(
+                    code: "sensor_unavailable",
+                    message: "Device motion is not available on this device",
+                    details: nil
+                )
+            )
+            return
+        }
+
+        guard orientationController.start() else {
+            result(
+                FlutterError(
+                    code: "sensor_start_failed",
+                    message: "Failed to start Core Motion device updates",
+                    details: nil
+                )
+            )
+            return
+        }
+
         result(nil)
     }
 
