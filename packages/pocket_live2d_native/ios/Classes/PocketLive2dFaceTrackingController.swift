@@ -57,7 +57,8 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
             return
         }
 
-        let timestamp = session.currentFrame?.timestamp ?? ProcessInfo.processInfo.systemUptime
+        let timestamp = session.currentFrame?.timestamp
+            ?? ProcessInfo.processInfo.systemUptime
         guard timestamp - lastEmitTimestamp >= Self.eventIntervalSeconds else {
             return
         }
@@ -148,10 +149,10 @@ final class PocketLive2dFaceTrackingController: NSObject, ARSessionDelegate {
         let r21 = Double(transform.columns.1.z)
         let r22 = Double(transform.columns.2.z)
 
-        let horizontal = sqrt((r00 * r00) + (r10 * r10))
-        let pitch = atan2(-r20, horizontal)
-        let yaw = atan2(r10, r00)
-        let roll = atan2(r21, r22)
+        // R = Rz(roll) * Ry(yaw) * Rx(pitch)
+        let pitch = atan2(r21, r22)
+        let yaw = atan2(-r20, sqrt((r21 * r21) + (r22 * r22)))
+        let roll = atan2(r10, r00)
 
         return (
             yaw: radiansToDegrees(yaw),
