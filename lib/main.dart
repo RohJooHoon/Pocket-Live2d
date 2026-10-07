@@ -69,8 +69,8 @@ class _CharacterHomePageState extends State<CharacterHomePage>
 
   void _lookAt(Offset position, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
-    _session.lookAt(position.dx / size.width * 2 - 1,
-        1 - position.dy / size.height * 2);
+    _session.lookAt(
+        position.dx / size.width * 2 - 1, 1 - position.dy / size.height * 2);
   }
 
   @override
@@ -87,21 +87,27 @@ class _CharacterHomePageState extends State<CharacterHomePage>
                   Expanded(
                     child: Card(
                       clipBehavior: Clip.antiAlias,
-                      child: _session.ready && _session.capabilities.nativeSurface
+                      child: _session.ready &&
+                              _session.capabilities.nativeSurface
                           ? LayoutBuilder(builder: (context, constraints) {
                               final size = constraints.biggest;
                               return Listener(
                                 behavior: HitTestBehavior.opaque,
-                                onPointerDown: (event) => _lookAt(event.localPosition, size),
-                                onPointerMove: (event) => _lookAt(event.localPosition, size),
+                                onPointerDown: (event) =>
+                                    _lookAt(event.localPosition, size),
+                                onPointerMove: (event) =>
+                                    _lookAt(event.localPosition, size),
                                 onPointerUp: (_) => _session.endTouch(),
                                 onPointerCancel: (_) => _session.endTouch(),
                                 child: IgnorePointer(
-                                  child: widget.surfaceBuilder?.call(context) ?? const Live2DView(),
+                                  child: widget.surfaceBuilder?.call(context) ??
+                                      const Live2DView(),
                                 ),
                               );
                             })
-                          : const Center(child: Icon(Icons.face_retouching_natural, size: 72)),
+                          : const Center(
+                              child: Icon(Icons.face_retouching_natural,
+                                  size: 72)),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -117,14 +123,17 @@ class _CharacterHomePageState extends State<CharacterHomePage>
                     title: const Text('기울기 반응'),
                     subtitle: const Text('기기를 기울이거나 화면을 드래그해 보세요.'),
                     value: _session.gyroEnabled,
-                    onChanged: _session.ready && !_session.busy && _session.capabilities.gyro
+                    onChanged: _session.ready &&
+                            !_session.busy &&
+                            _session.capabilities.gyro
                         ? _session.setGyroEnabled
                         : null,
                   ),
                   OutlinedButton(
-                    onPressed: _session.ready && !_session.busy && _session.gyroEnabled
-                        ? _session.calibrate
-                        : null,
+                    onPressed:
+                        _session.ready && !_session.busy && _session.gyroEnabled
+                            ? _session.calibrate
+                            : null,
                     child: const Text('현재 자세를 기준으로 맞추기'),
                   ),
                   const SwitchListTile(

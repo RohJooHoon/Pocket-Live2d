@@ -41,6 +41,7 @@ Flutter의 GeneratedPluginRegistrant가 Kotlin/Swift 구현을 등록하므로
 - 앱은 portraitUp을 사용한다. landscape 좌표 재매핑은 후속 작업이다.
 - Android: GAME_ROTATION_VECTOR 우선, ROTATION_VECTOR fallback.
 - iOS: Core Motion deviceMotion, xArbitraryZVertical reference frame.
+- macOS bootstrap은 host Info.plist에 NSMotionUsageDescription을 추가한다. 기존 문구가 있으면 보존한다.
 - quaternion은 `w,x,y,z` 순서로 통일한다.
 - 시작/복귀/보정 후 첫 샘플을 baseline으로 저장하고 `inverse(baseline) * current`를 계산한다.
 - 상대 quaternion을 짧은 회전의 axis-angle로 변환한다. q와 -q는 같은 자세로 취급한다.

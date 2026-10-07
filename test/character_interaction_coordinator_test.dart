@@ -32,7 +32,8 @@ class _FakeLive2DController implements Live2DController {
   Future<void> calibrate() async {}
 
   @override
-  Future<void> loadModel(String modelId) async => calls.add('loadModel:$modelId');
+  Future<void> loadModel(String modelId) async =>
+      calls.add('loadModel:$modelId');
 
   @override
   Future<void> lookAt(double x, double y) async => calls.add('lookAt:$x,$y');
@@ -46,8 +47,7 @@ class _FakeLive2DController implements Live2DController {
       calls.add('setExpression:$expressionId');
 
   @override
-  Future<void> setGyroEnabled(bool enabled) async =>
-      calls.add('gyro:$enabled');
+  Future<void> setGyroEnabled(bool enabled) async => calls.add('gyro:$enabled');
 
   @override
   Future<void> setMimicEnabled(bool enabled) async =>

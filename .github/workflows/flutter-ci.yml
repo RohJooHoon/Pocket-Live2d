@@ -34,7 +34,7 @@ jobs:
             test
             packages/pocket_live2d_native/lib
       - run: flutter analyze --fatal-infos
-      - run: flutter test
+      - run: flutter test --timeout 30s
       - run: bash tool/test_bootstrap.sh
 
   android:
@@ -51,7 +51,7 @@ jobs:
           flutter-version: '3.35.7'
           channel: stable
           cache: true
-      - run: bash tool/bootstrap_platforms.sh
+      - run: POCKET_LIVE2D_SKIP_TESTS=1 bash tool/bootstrap_platforms.sh
       - run: flutter build apk --debug
       - run: ./android/gradlew -p android :pocket_live2d_native:testDebugUnitTest
 
@@ -65,5 +65,5 @@ jobs:
           flutter-version: '3.35.7'
           channel: stable
           cache: true
-      - run: bash tool/bootstrap_platforms.sh
+      - run: POCKET_LIVE2D_SKIP_TESTS=1 bash tool/bootstrap_platforms.sh
       - run: flutter build ios --simulator --debug

@@ -24,6 +24,15 @@ if [[ ! -d android || ! -d ios ]]; then
   fi
 fi
 
+# iOS host setup runs on macOS; preserve an existing usage description.
+if [[ -f ios/Runner/Info.plist && -x /usr/libexec/PlistBuddy ]]; then
+  if ! /usr/libexec/PlistBuddy -c 'Print :NSMotionUsageDescription' ios/Runner/Info.plist >/dev/null 2>&1; then
+    /usr/libexec/PlistBuddy -c 'Add :NSMotionUsageDescription string 기기 기울기에 캐릭터가 반응하도록 움직임 데이터를 사용합니다.' ios/Runner/Info.plist
+  fi
+fi
+
 flutter pub get
-flutter test
+if [[ "${POCKET_LIVE2D_SKIP_TESTS:-0}" != 1 ]]; then
+  flutter test --timeout 30s
+fi
 echo "Platform bootstrap complete. Run flutter run on an iPhone or Android device."

@@ -10,8 +10,14 @@ void main() {
   const mapper = Live2DTrackingMapper();
 
   test('sensor noise is neutral, and full tilt reaches bounded limits', () {
-    final filter = OrientationFilter(config: const OrientationFilterConfig(deadZone: 0.04, smoothingFactor: 1));
-    expect(mapper.fromOrientation(filter.update(const OrientationState(x: 0.02))).angleX, 0);
+    final filter = OrientationFilter(
+        config:
+            const OrientationFilterConfig(deadZone: 0.04, smoothingFactor: 1));
+    expect(
+        mapper
+            .fromOrientation(filter.update(const OrientationState(x: 0.02)))
+            .angleX,
+        0);
     final state = mapper.fromOrientation(const OrientationState(x: 10, y: -10));
     expect(state.angleX, 30);
     expect(state.angleY, -30);
@@ -20,7 +26,8 @@ void main() {
   });
 
   test('native malformed and nonfinite samples remain finite', () {
-    final input = OrientationState.fromMap({'x': 'bad', 'y': double.nan, 'z': double.infinity});
+    final input = OrientationState.fromMap(
+        {'x': 'bad', 'y': double.nan, 'z': double.infinity});
     final output = mapper.fromOrientation(input);
     expect(output.toMap().values.every((value) => value.isFinite), isTrue);
     expect(output.angleX, 0);
@@ -30,7 +37,10 @@ void main() {
 
   test('face loss returns to open eyes and neutral head', () {
     final state = mapper.fromFaceTracking(const FaceTrackingState(
-      headYaw: 20, eyeBlinkLeft: 1, mouthOpen: 1, trackingConfidence: 0.1,
+      headYaw: 20,
+      eyeBlinkLeft: 1,
+      mouthOpen: 1,
+      trackingConfidence: 0.1,
     ));
     expect(state.angleX, 0);
     expect(state.eyeLOpen, 1);
@@ -38,7 +48,8 @@ void main() {
   });
 
   test('smoothing response is stable across different frame rates', () {
-    const target = Live2DParameterState(angleX: 30, eyeBallX: 1, bodyAngleX: 10);
+    const target =
+        Live2DParameterState(angleX: 30, eyeBallX: 1, bodyAngleX: 10);
     final fast = Live2DParameterSmoother();
     final slow = Live2DParameterSmoother();
     late Live2DParameterState fastState;

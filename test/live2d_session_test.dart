@@ -6,7 +6,8 @@ import 'package:pocket_live2d/live2d/live2d_session.dart';
 import 'support/fake_live2d_controller.dart';
 
 void main() {
-  testWidgets('failed native gyro command leaves switch state disabled', (tester) async {
+  testWidgets('failed native gyro command leaves switch state disabled',
+      (tester) async {
     final native = FakeLive2DController()..failGyro = true;
     final session = Live2DSession(native);
     await session.initialize();
@@ -19,7 +20,8 @@ void main() {
     expect(native.disposed, isTrue);
   });
 
-  testWidgets('parameter calls are coalesced and stop in the background', (tester) async {
+  testWidgets('parameter calls are coalesced and stop in the background',
+      (tester) async {
     final native = FakeLive2DController()..parameterGate = Completer<void>();
     final session = Live2DSession(native);
     await session.initialize();
@@ -44,7 +46,8 @@ void main() {
     expect(native.disposed, isTrue);
   });
 
-  testWidgets('dispose waits for pending parameters before native cleanup', (tester) async {
+  testWidgets('dispose waits for pending parameters before native cleanup',
+      (tester) async {
     final native = FakeLive2DController()..parameterGate = Completer<void>();
     final session = Live2DSession(native);
     await session.initialize();

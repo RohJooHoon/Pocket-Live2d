@@ -24,13 +24,15 @@ class FakeLive2DController implements Live2DController {
   @override
   Stream<OrientationState> get orientationStates => orientation.stream;
   @override
-  Future<Live2DCapabilities> initialize() async => const Live2DCapabilities(nativeSurface: true, gyro: true);
+  Future<Live2DCapabilities> initialize() async =>
+      const Live2DCapabilities(nativeSurface: true, gyro: true);
   @override
   Future<void> setGyroEnabled(bool enabled) async {
     if (enabled && failGyro) {
       throw PlatformException(code: 'sensor_unavailable');
     }
   }
+
   @override
   Future<void> setParameters(Live2DParameterState state) async {
     parameterCalls++;
@@ -42,6 +44,7 @@ class FakeLive2DController implements Live2DController {
     await parameterGate?.future;
     concurrentCalls--;
   }
+
   @override
   Future<void> setActive(bool active) async => activeCalls.add(active);
   @override

@@ -21,7 +21,9 @@ class Live2DView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) return const Center(child: Text('iPhone 또는 Android에서 실행해 주세요.'));
+    if (kIsWeb) {
+      return const Center(child: Text('iPhone 또는 Android에서 실행해 주세요.'));
+    }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return AndroidView(

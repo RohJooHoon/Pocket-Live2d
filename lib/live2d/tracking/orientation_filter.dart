@@ -13,8 +13,8 @@ class OrientationFilterConfig {
 class OrientationFilter {
   OrientationFilter({
     this.config = const OrientationFilterConfig(),
-  }) : assert(config.deadZone >= 0 && config.deadZone < 1),
-       assert(config.smoothingFactor > 0 && config.smoothingFactor <= 1);
+  })  : assert(config.deadZone >= 0 && config.deadZone < 1),
+        assert(config.smoothingFactor > 0 && config.smoothingFactor <= 1);
 
   final OrientationFilterConfig config;
 

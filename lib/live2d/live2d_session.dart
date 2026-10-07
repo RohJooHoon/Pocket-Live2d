@@ -15,11 +15,14 @@ import 'tracking/orientation_filter.dart';
 
 /// Owns input subscriptions, foreground state and a bounded parameter pump.
 class Live2DSession extends ChangeNotifier {
-  Live2DSession(this.controller) : _coordinator = CharacterInteractionCoordinator(controller);
+  Live2DSession(this.controller)
+      : _coordinator = CharacterInteractionCoordinator(controller);
 
   final Live2DController controller;
   final CharacterInteractionCoordinator _coordinator;
-  final _filter = OrientationFilter(config: const OrientationFilterConfig(deadZone: 0.04, smoothingFactor: 1));
+  final _filter = OrientationFilter(
+      config:
+          const OrientationFilterConfig(deadZone: 0.04, smoothingFactor: 1));
   final _mapper = const Live2DTrackingMapper();
   final _smoother = Live2DParameterSmoother();
   final _clock = Stopwatch();
@@ -77,11 +80,12 @@ class Live2DSession extends ChangeNotifier {
   Future<void> setGyroEnabled(bool enabled) => _run(() async {
         if (!_ready) return;
         // UI state changes only after the native command succeeds.
-        await _coordinator.setMode(enabled ? CharacterInputMode.gyro : CharacterInputMode.idle);
+        await _coordinator.setMode(
+            enabled ? CharacterInputMode.gyro : CharacterInputMode.idle);
         _gyroEnabled = enabled;
         _orientation = const OrientationState();
         _smoother.reset();
-    _filter.reset();
+        _filter.reset();
         _status = enabled ? '지금 자세를 기준으로 기울여 보세요.' : '기울기 입력을 껐습니다.';
       });
 
@@ -90,7 +94,7 @@ class Live2DSession extends ChangeNotifier {
         await controller.calibrate();
         _orientation = const OrientationState();
         _smoother.reset();
-    _filter.reset();
+        _filter.reset();
         _status = '현재 자세를 기준으로 맞췄습니다.';
       });
 
@@ -151,7 +155,8 @@ class Live2DSession extends ChangeNotifier {
     _lastFrame = _clock.elapsed;
     _timer = Timer.periodic(const Duration(milliseconds: 33), (_) {
       final now = _clock.elapsed;
-      final target = _touch ?? _mapper.fromOrientation(_filter.update(_orientation));
+      final target =
+          _touch ?? _mapper.fromOrientation(_filter.update(_orientation));
       _pending = _smoother.step(target, now - _lastFrame);
       _lastFrame = now;
       _pump ??= _flush().whenComplete(() => _pump = null);

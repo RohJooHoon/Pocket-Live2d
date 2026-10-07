@@ -40,7 +40,8 @@ class Live2DTrackingMapper {
       angleZ: z * config.maxHeadZ,
       eyeBallX: _clampUnit(x * config.eyeGain),
       eyeBallY: _clampUnit(y * config.eyeGain),
-      bodyAngleX: _clamp(x * config.maxBodyX, -config.maxBodyX, config.maxBodyX),
+      bodyAngleX:
+          _clamp(x * config.maxBodyX, -config.maxBodyX, config.maxBodyX),
     );
   }
 
