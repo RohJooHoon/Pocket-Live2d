@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'live2d/interaction/character_input_mode.dart';
 import 'live2d/interaction/character_interaction_coordinator.dart';
 import 'live2d/live2d_method_channel.dart';
+import 'live2d/live2d_view.dart';
 
 void main() {
   runApp(const PocketLive2DApp());
@@ -86,21 +87,37 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
               Expanded(
                 child: Card(
                   clipBehavior: Clip.antiAlias,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.face_retouching_natural, size: 72),
-                        const SizedBox(height: 16),
-                        const Text('Live2D native surface'),
-                        const SizedBox(height: 8),
-                        Text(
-                          _nativeStatus,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const Live2DView(),
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              child: Text(
+                                _nativeStatus,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
