@@ -9,6 +9,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
     private lateinit var methodChannel: MethodChannel
     private lateinit var faceTrackingChannel: EventChannel
     private lateinit var orientationChannel: EventChannel
+    private lateinit var orientationController: PocketLive2dOrientationController
 
     private val faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private val orientationStreamHandler = PocketLive2dStreamHandler()
@@ -22,6 +23,12 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
 
         orientationChannel = EventChannel(binding.binaryMessenger, ORIENTATION_CHANNEL)
         orientationChannel.setStreamHandler(orientationStreamHandler)
+
+        orientationController = PocketLive2dOrientationController(
+            binding.applicationContext,
+        ) { event ->
+            orientationStreamHandler.emit(event)
+        }
 
         binding.platformViewRegistry.registerViewFactory(
             VIEW_TYPE,
@@ -39,6 +46,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             "setMimicEnabled" -> handleSetMimicEnabled(call, result)
             "lookAt" -> handleLookAt(call, result)
             "dispose" -> {
+                orientationController.stop()
                 faceTrackingStreamHandler.clear()
                 orientationStreamHandler.clear()
                 result.success(null)
@@ -87,7 +95,30 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
-        // TODO: Register/unregister Rotation Vector sensor listener.
+        if (!enabled) {
+            orientationController.stop()
+            result.success(null)
+            return
+        }
+
+        if (!orientationController.isSupported) {
+            result.error(
+                "sensor_unavailable",
+                "Rotation Vector sensor is not available on this device",
+                null,
+            )
+            return
+        }
+
+        if (!orientationController.start()) {
+            result.error(
+                "sensor_start_failed",
+                "Failed to register Rotation Vector sensor listener",
+                null,
+            )
+            return
+        }
+
         result.success(null)
     }
 
@@ -115,6 +146,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        orientationController.stop()
         methodChannel.setMethodCallHandler(null)
         faceTrackingChannel.setStreamHandler(null)
         orientationChannel.setStreamHandler(null)
