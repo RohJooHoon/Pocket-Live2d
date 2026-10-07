@@ -47,10 +47,12 @@ describe('legal documents', () => {
     expect(terms).toContain('웹 브라우저가 내려받은 파일');
   });
 
-  it('privacy policy matches what the page does', () => {
+  it('privacy policy matches what the page and its hosting do', () => {
     expect(privacy).toContain('카메라와 마이크를 사용하지 않습니다');
     expect(privacy).toContain('쿠키는 사용하지 않습니다');
     expect(privacy).toContain('접속 기록');
+    expect(privacy).toContain('개인정보의 국외 이전');
+    expect(privacy).toContain('Cloudflare, Inc.');
   });
 
   it('only uses Markdown the in-page renderer supports', () => {

@@ -2,6 +2,7 @@
 // Vite serves and copies that folder, so dev and build see the same layout:
 //   model/                      characters/<id>/model/
 //   cubism/live2dcubismcore.min.js, cubism/shaders/WebGL/   (only when the SDK is staged)
+//   _headers                    deploy/cloudflare/_headers (Cloudflare Pages)
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -20,6 +21,7 @@ cpSync(resolve(characterDir, 'model'), resolve(out, 'model'), {
   recursive: true,
   filter: (source) => !source.endsWith('README.md'),
 });
+cpSync(resolve(root, 'deploy/cloudflare/_headers'), resolve(out, '_headers'));
 
 const core = resolve(root, 'vendor/cubism/Core/live2dcubismcore.min.js');
 const shaders = resolve(root, 'vendor/cubism/Framework/Shaders/WebGL');

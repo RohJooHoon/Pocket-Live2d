@@ -9,7 +9,7 @@
 - [4. 화면 이해하기](#4-화면-이해하기)
 - [5. 기능별 테스트](#5-기능별-테스트)
 - [6. 박람회 태블릿 설정](#6-박람회-태블릿-설정)
-- [7. 배포와 QR 코드](#7-배포와-qr-코드)
+- [7. 배포와 QR 코드 (Cloudflare Pages)](#7-배포와-qr-코드-cloudflare-pages)
 - [8. 문제 해결](#8-문제-해결)
 - [9. 결과 기록표](#9-결과-기록표)
 
@@ -185,26 +185,61 @@ npm run build && npm run preview
 - **거치대에 세운 태블릿은 기울이기를 꺼 두는 게 좋습니다.** 터치 반응 위주로 시연합니다.
 - 태블릿 앞에는 같은 캐릭터 사이트의 **QR 코드**를 둡니다. 관람객이 자기 휴대폰으로 열어 기울이기·흔들기를 직접 해 볼 수 있습니다.
 
-## 7. 배포와 QR 코드
+## 7. 배포와 QR 코드 (Cloudflare Pages)
 
-### 빌드
+캐릭터 사이트는 **Cloudflare Pages에 직접 업로드**합니다.
 
-캐릭터마다 따로 빌드합니다. **SDK가 준비된 PC에서** 빌드해야 결과물에 Core와 셰이더가 들어갑니다.
+- **SDK가 준비된 PC에서 빌드한 폴더를 올립니다.** 그래야 결과물에 Core와 셰이더가 들어갑니다.
+- **Cloudflare의 GitHub 연동 자동 빌드는 쓰지 않습니다.** Cloudflare 서버에는 SDK가 없어서 "SDK 연결 필요" 페이지가 올라가고, SDK를 저장소에 넣을 수도 없기 때문입니다.
+- 이렇게 올리면 Cubism Core가 git에 남지 않습니다.
+- 주소는 기본으로 https입니다 (`<프로젝트>.pages.dev`).
+
+### 처음 한 번
+
+1. [Cloudflare](https://dash.cloudflare.com/sign-up) 계정을 만듭니다 (무료 플랜으로 충분).
+2. Node.js 22 이상인지 확인합니다 (`node -v`). 업로드 도구(Wrangler)가 22 이상을 요구합니다.
+3. 로그인합니다. 브라우저가 열리면 허용을 누릅니다.
+   ```bash
+   npx wrangler login
+   ```
+
+### 올리기 (명령 한 번)
 
 ```bash
-CHARACTER=mark npm run build     # → dist/mark/
+npm run deploy -- mark
 ```
 
-`dist/<id>/` 폴더 전체가 하나의 정적 사이트입니다. 서버 프로그램은 필요 없습니다.
+이 명령이 순서대로 하는 일은 다음과 같습니다.
+1. SDK가 준비됐는지 확인합니다. 없으면 멈춥니다.
+2. `dist/mark/`를 빌드합니다.
+3. 결과물에 Core가 들어 있는지 확인합니다.
+4. Cloudflare Pages 프로젝트 `motionmate-mark`를 만듭니다 (이미 있으면 건너뜀).
+5. 업로드합니다.
 
-### 올리기
+- 끝나면 `https://motionmate-mark.pages.dev` 주소가 나옵니다.
+- 프로젝트 이름을 바꾸려면 `characters/<id>/character.json`에 `"pagesProject": "원하는-이름"`을 넣습니다. 소문자, 숫자, `-`만 쓸 수 있습니다.
+- 올리기 전에 명령만 확인하려면 `npm run deploy -- mark --dry-run`을 실행합니다.
 
-- https를 지원하는 정적 호스팅이면 어디든 됩니다. 예: Cloudflare Pages, Netlify, Vercel, 일반 웹 호스팅.
-- **빌드 결과물에는 Cubism Core가 들어 있습니다.**
-  - 공개 저장소의 GitHub Pages 브랜치처럼 결과물이 git에 커밋되는 방식은 피하세요.
-  - PC에서 빌드한 폴더를 호스팅 서비스의 업로드 기능이나 CLI로 올리는 방식을 권장합니다.
-- 도메인을 캐릭터마다 하나씩 연결합니다. 예: `mark.example.com`
-- 올린 뒤 개인정보처리방침의 `[호스팅 사업자]`와 `[보관 기간]`을 실제 값으로 채웁니다. 접속 기록을 남기는 곳이 바로 호스팅 사업자입니다.
+### 대시보드에서 직접 올리기 (명령어 없이)
+
+1. `npm run build`로 `dist/mark/`를 만듭니다. Windows는 `$env:CHARACTER="mark"; npm run build`로 실행합니다.
+2. Cloudflare 대시보드 → **Workers & Pages** → **Create** → **Pages** → **Upload assets**를 엽니다.
+3. 프로젝트 이름을 정하고 `dist/mark` 폴더를 끌어다 놓습니다.
+4. 다음 버전부터는 같은 프로젝트의 **Create deployment**로 새 폴더를 올립니다.
+
+### 캐릭터별 도메인 연결
+
+1. 대시보드 → **Workers & Pages** → 프로젝트 → **Custom domains** → **Set up a custom domain**으로 갑니다.
+2. `mark.example.com`처럼 캐릭터별 주소를 입력합니다.
+   - 도메인을 Cloudflare에서 관리하면 DNS가 자동으로 연결됩니다.
+   - 다른 곳에서 관리하면 안내대로 `CNAME`을 `<프로젝트>.pages.dev`로 추가합니다.
+3. 인증서가 자동으로 발급되어 https로 열립니다. 몇 분 걸릴 수 있습니다.
+
+### 함께 올라가는 설정
+
+빌드할 때 `deploy/cloudflare/_headers`가 함께 들어갑니다.
+- 모델과 스크립트 파일의 캐시 시간을 정합니다.
+- 브라우저가 이 사이트에서 카메라·마이크·위치를 쓰지 못하도록 막습니다. 개인정보처리방침 9항의 내용이 이것입니다.
 
 ### QR 코드
 
@@ -219,6 +254,7 @@ CHARACTER=mark npm run build     # → dist/mark/
 | J-2 | QR 코드 스캔 | 같은 주소가 열림 |
 | J-3 | 이용약관·개인정보처리방침 열기 | 자리표시자(`[운영자 이름]` 등)가 남아 있지 않음 |
 | J-4 | 기울이기 켜기 | 휴대폰에서 동작함 |
+| J-5 | 커스텀 도메인으로 열기 | https로 열리고 `pages.dev` 주소와 같은 화면 |
 
 ## 8. 문제 해결
 

@@ -44,6 +44,18 @@ npm run dev:https    # https://<PC의 IP>:5173 (자체 서명 인증서 경고�
 
 기기별 테스트 방법, 박람회 태블릿 설정, 배포와 QR 코드는 [웹 테스트·배포 가이드](docs/WEB_TESTING.md)에 있습니다.
 
+### 인터넷에 올리기 (Cloudflare Pages)
+
+SDK가 준비된 PC에서 빌드해 Cloudflare Pages에 직접 업로드합니다. 주소는 `https://<프로젝트>.pages.dev`로 바로 https입니다.
+
+```bash
+npx wrangler login         # 처음 한 번 (Node.js 22 이상 필요)
+npm run deploy -- mark     # 빌드 → Core 포함 확인 → 업로드
+```
+
+Cloudflare의 GitHub 연동 자동 빌드는 쓰지 않습니다. Cloudflare 서버에는 SDK가 없고, SDK를 저장소에 넣을 수도 없기 때문입니다.
+커스텀 도메인 연결과 QR 코드는 [웹 테스트·배포 가이드 7장](docs/WEB_TESTING.md#7-배포와-qr-코드-cloudflare-pages)을 보세요.
+
 ## 캐릭터 사이트 만들기
 
 캐릭터마다 `characters/<id>/` 폴더를 만듭니다.
