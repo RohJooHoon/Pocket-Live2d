@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'live2d/interaction/character_input_mode.dart';
+import 'live2d/interaction/character_interaction_coordinator.dart';
 import 'live2d/live2d_method_channel.dart';
+import 'live2d/live2d_view.dart';
 
 void main() {
   runApp(const PocketLive2DApp());
@@ -33,10 +36,16 @@ class CharacterHomePage extends StatefulWidget {
 
 class _CharacterHomePageState extends State<CharacterHomePage> {
   final _controller = Live2DMethodChannel();
+  late final CharacterInteractionCoordinator _interactionCoordinator;
 
-  bool _gyroEnabled = false;
-  bool _mimicEnabled = false;
+  CharacterInputMode _inputMode = CharacterInputMode.idle;
   String _nativeStatus = 'Native Live2D bridge not initialized';
+
+  @override
+  void initState() {
+    super.initState();
+    _interactionCoordinator = CharacterInteractionCoordinator(_controller);
+  }
 
   Future<void> _runNativeAction(Future<void> Function() action) async {
     try {
@@ -52,6 +61,11 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
       if (!mounted) return;
       setState(() => _nativeStatus = 'Native error: ${error.code}');
     }
+  }
+
+  Future<void> _setInputMode(CharacterInputMode mode) async {
+    setState(() => _inputMode = mode);
+    await _runNativeAction(() => _interactionCoordinator.setMode(mode));
   }
 
   @override
@@ -73,21 +87,37 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
               Expanded(
                 child: Card(
                   clipBehavior: Clip.antiAlias,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.face_retouching_natural, size: 72),
-                        const SizedBox(height: 16),
-                        const Text('Live2D native surface'),
-                        const SizedBox(height: 8),
-                        Text(
-                          _nativeStatus,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const Live2DView(),
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              child: Text(
+                                _nativeStatus,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -96,26 +126,47 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
                 onPressed: () => _runNativeAction(_controller.initialize),
                 child: const Text('Initialize Live2D'),
               ),
+              const SizedBox(height: 16),
+              Text(
+                'Interaction mode',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Gyro mode'),
-                subtitle: const Text('기울기에 따라 눈·머리·몸이 반응합니다.'),
-                value: _gyroEnabled,
-                onChanged: (value) {
-                  setState(() => _gyroEnabled = value);
-                  _runNativeAction(() => _controller.setGyroEnabled(value));
+              SegmentedButton<CharacterInputMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: CharacterInputMode.idle,
+                    icon: Icon(Icons.self_improvement),
+                    label: Text('기본'),
+                  ),
+                  ButtonSegment(
+                    value: CharacterInputMode.gyro,
+                    icon: Icon(Icons.screen_rotation),
+                    label: Text('자이로'),
+                  ),
+                  ButtonSegment(
+                    value: CharacterInputMode.mimic,
+                    icon: Icon(Icons.face),
+                    label: Text('따라하기'),
+                  ),
+                ],
+                selected: {_inputMode},
+                onSelectionChanged: (selection) {
+                  if (selection.isEmpty) return;
+                  _setInputMode(selection.first);
                 },
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('따라하기'),
-                subtitle: const Text('전면 카메라로 얼굴 움직임을 추적합니다.'),
-                value: _mimicEnabled,
-                onChanged: (value) {
-                  setState(() => _mimicEnabled = value);
-                  _runNativeAction(() => _controller.setMimicEnabled(value));
+              const SizedBox(height: 8),
+              Text(
+                switch (_inputMode) {
+                  CharacterInputMode.idle =>
+                    'Idle Motion과 터치 상호작용만 사용합니다.',
+                  CharacterInputMode.gyro =>
+                    '기울기에 따라 눈·머리·몸이 반응합니다.',
+                  CharacterInputMode.mimic =>
+                    '전면 카메라로 얼굴 움직임을 추적합니다.',
                 },
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
