@@ -9,10 +9,18 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
 
     private let faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private let orientationStreamHandler = PocketLive2dStreamHandler()
+    private let renderer: PocketLive2dRenderer = PendingCubismRenderer()
 
     private lazy var orientationController = PocketLive2dOrientationController {
         [weak self] event in
-        self?.orientationStreamHandler.emit(event)
+        guard let self else { return }
+
+        self.renderer.applyOrientation(
+            x: self.number(event["x"]) ?? 0,
+            y: self.number(event["y"]) ?? 0,
+            z: self.number(event["z"]) ?? 0
+        )
+        self.orientationStreamHandler.emit(event)
     }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -37,7 +45,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
         orientationChannel.setStreamHandler(instance.orientationStreamHandler)
 
         registrar.register(
-            PocketLive2dViewFactory(),
+            PocketLive2dViewFactory(renderer: instance.renderer),
             withId: viewType
         )
     }
@@ -45,6 +53,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "initialize":
+            renderer.initialize()
             result(nil)
         case "loadModel":
             handleLoadModel(call, result: result)
@@ -60,6 +69,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             handleLookAt(call, result: result)
         case "dispose":
             orientationController.stop()
+            renderer.dispose()
             faceTrackingStreamHandler.clear()
             orientationStreamHandler.clear()
             result(nil)
@@ -78,7 +88,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
-        // TODO: Route to the Cubism model repository once the SDK is linked.
+        renderer.loadModel(modelId: modelId)
         result(nil)
     }
 
@@ -92,7 +102,8 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
-        // TODO: Route group/index to the Cubism motion controller.
+        let index = (args["index"] as? NSNumber)?.intValue
+        renderer.playMotion(group: group, index: index)
         result(nil)
     }
 
@@ -106,7 +117,7 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
-        // TODO: Route to Cubism expression handling.
+        renderer.setExpression(expressionId: expressionId)
         result(nil)
     }
 
@@ -174,9 +185,10 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             return
         }
 
-        _ = x
-        _ = y
-        // TODO: Route normalized coordinates to eye/head target parameters.
+        renderer.lookAt(
+            x: min(max(x, -1), 1),
+            y: min(max(y, -1), 1)
+        )
         result(nil)
     }
 
