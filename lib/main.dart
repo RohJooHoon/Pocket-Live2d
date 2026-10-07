@@ -40,6 +40,7 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
 
   CharacterInputMode _inputMode = CharacterInputMode.idle;
   String _nativeStatus = 'Native Live2D bridge not initialized';
+  bool _modeChangeInFlight = false;
 
   @override
   void initState() {
@@ -47,25 +48,48 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
     _interactionCoordinator = CharacterInteractionCoordinator(_controller);
   }
 
-  Future<void> _runNativeAction(Future<void> Function() action) async {
+  Future<bool> _runNativeAction(Future<void> Function() action) async {
     try {
       await action();
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _nativeStatus = 'Native bridge connected');
+      return true;
     } on MissingPluginException {
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _nativeStatus = 'Native bridge pending — Sprint 1 implementation';
       });
+      return false;
     } on PlatformException catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _nativeStatus = 'Native error: ${error.code}');
+      return false;
+    } catch (error) {
+      if (!mounted) return false;
+      setState(() => _nativeStatus = 'Interaction error: $error');
+      return false;
     }
   }
 
   Future<void> _setInputMode(CharacterInputMode mode) async {
-    setState(() => _inputMode = mode);
-    await _runNativeAction(() => _interactionCoordinator.setMode(mode));
+    if (_modeChangeInFlight || mode == _inputMode) return;
+
+    setState(() {
+      _modeChangeInFlight = true;
+      _nativeStatus = 'Switching interaction mode…';
+    });
+
+    final succeeded = await _runNativeAction(
+      () => _interactionCoordinator.setMode(mode),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      if (succeeded) {
+        _inputMode = mode;
+      }
+      _modeChangeInFlight = false;
+    });
   }
 
   @override
@@ -151,10 +175,12 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
                   ),
                 ],
                 selected: {_inputMode},
-                onSelectionChanged: (selection) {
-                  if (selection.isEmpty) return;
-                  _setInputMode(selection.first);
-                },
+                onSelectionChanged: _modeChangeInFlight
+                    ? null
+                    : (selection) {
+                        if (selection.isEmpty) return;
+                        _setInputMode(selection.first);
+                      },
               ),
               const SizedBox(height: 8),
               Text(
