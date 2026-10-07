@@ -15,12 +15,15 @@ class CharacterInteractionCoordinator {
       case CharacterInputMode.idle:
         await controller.setMimicEnabled(false);
         await controller.setGyroEnabled(false);
+        break;
       case CharacterInputMode.gyro:
         await controller.setMimicEnabled(false);
         await controller.setGyroEnabled(true);
+        break;
       case CharacterInputMode.mimic:
         await controller.setGyroEnabled(false);
         await controller.setMimicEnabled(true);
+        break;
     }
 
     _mode = nextMode;
