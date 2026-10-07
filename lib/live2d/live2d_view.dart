@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pocket_live2d_native/pocket_live2d_native.dart';
 
 class Live2DView extends StatelessWidget {
   const Live2DView({
@@ -8,8 +9,6 @@ class Live2DView extends StatelessWidget {
     this.modelId,
     this.backgroundColor,
   });
-
-  static const viewType = 'pocket_live2d/view';
 
   final String? modelId;
   final Color? backgroundColor;
@@ -24,13 +23,13 @@ class Live2DView extends StatelessWidget {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return AndroidView(
-          viewType: viewType,
+          viewType: PocketLive2DNative.viewType,
           creationParams: _creationParams,
           creationParamsCodec: const StandardMessageCodec(),
         );
       case TargetPlatform.iOS:
         return UiKitView(
-          viewType: viewType,
+          viewType: PocketLive2DNative.viewType,
           creationParams: _creationParams,
           creationParamsCodec: const StandardMessageCodec(),
         );
