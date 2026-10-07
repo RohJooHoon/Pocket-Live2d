@@ -7,6 +7,7 @@ internal interface PocketLive2dRenderer {
     fun setExpression(expressionId: String)
     fun lookAt(x: Double, y: Double)
     fun applyOrientation(x: Double, y: Double, z: Double)
+    fun applyFaceTracking(state: Map<String, Double>)
     fun dispose()
 }
 
@@ -22,5 +23,6 @@ internal class PendingCubismRenderer : PocketLive2dRenderer {
     override fun setExpression(expressionId: String) = Unit
     override fun lookAt(x: Double, y: Double) = Unit
     override fun applyOrientation(x: Double, y: Double, z: Double) = Unit
+    override fun applyFaceTracking(state: Map<String, Double>) = Unit
     override fun dispose() = Unit
 }
