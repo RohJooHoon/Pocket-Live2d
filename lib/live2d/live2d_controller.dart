@@ -11,6 +11,8 @@ abstract interface class Live2DController {
   Future<void> setExpression(String expressionId);
   Future<void> setMimicEnabled(bool enabled);
   Future<void> setGyroEnabled(bool enabled);
-  Future<void> lookAt(double x, double y);
+  Future<void> lookAt(double x, double y, {bool active = true});
+  Future<void> tapAt(double x, double y);
+  Future<void> setWallpaper({String modelId = 'mark'});
   Future<void> dispose();
 }

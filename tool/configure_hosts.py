@@ -1,6 +1,7 @@
 """Configure generated Flutter hosts identically for local builds and CI."""
 from pathlib import Path
 import plistlib
+import shutil
 
 root = Path(__file__).resolve().parent.parent
 plist = root / "ios/Runner/Info.plist"
@@ -22,3 +23,8 @@ if manifest.exists():
         text = text[: close + 1] + '\n    <uses-permission android:name="android.permission.CAMERA" />' + text[close + 1 :]
         manifest.write_text(text)
 print("Host camera permissions configured.")
+
+# CocoaPods compiles a generated copy of the shared renderer from within its pod root.
+plugin = root / "packages/pocket_live2d_native"
+runtime = plugin / "ios/Classes/Runtime"
+shutil.copytree(plugin / "common", runtime, dirs_exist_ok=True)

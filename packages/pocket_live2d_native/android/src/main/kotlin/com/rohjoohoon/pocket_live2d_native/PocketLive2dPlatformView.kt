@@ -8,29 +8,14 @@ import io.flutter.plugin.platform.PlatformView
 
 internal class PocketLive2dPlatformView(
     context: Context,
-    private val creationParams: Map<String, Any?>,
-    private val renderer: PocketLive2dRenderer,
+    creationParams: Map<String, Any?>,
+    private val renderer: PocketLive2dCubismRenderer,
 ) : PlatformView {
-    private val rootView = FrameLayout(context).apply {
-        setBackgroundColor(resolveBackgroundColor(creationParams["backgroundColor"]))
+    private val root = FrameLayout(context).apply {
+        setBackgroundColor((creationParams["backgroundColor"] as? Number)?.toInt() ?: Color.TRANSPARENT)
+        addView(renderer.attach(), FrameLayout.LayoutParams(-1, -1))
     }
-
-    init {
-        modelId?.let(renderer::loadModel)
-    }
-
-    val modelId: String?
-        get() = creationParams["modelId"] as? String
-
-    override fun getView(): View = rootView
-
-    override fun dispose() {
-        rootView.removeAllViews()
-        // The renderer is plugin-scoped. Surface-specific cleanup will be added
-        // when the Cubism renderer owns an EGL surface for this PlatformView.
-    }
-
-    private fun resolveBackgroundColor(rawColor: Any?): Int {
-        return (rawColor as? Number)?.toInt() ?: Color.TRANSPARENT
-    }
+    init { (creationParams["modelId"] as? String)?.let(renderer::loadModel) }
+    override fun getView(): View = root
+    override fun dispose() { renderer.detach(); root.removeAllViews() }
 }

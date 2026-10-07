@@ -1,0 +1,4 @@
+<resources>
+    <string name="pocket_live2d_wallpaper_name">Pocket Live2D</string>
+    <string name="pocket_live2d_wallpaper_description">Interactive Live2D character with tilt and touch. No camera is used.</string>
+</resources>

@@ -28,3 +28,8 @@ packages/pocket_live2d_native/android/src/main/assets/face_landmarker.task
 vendor/live2d/
 third_party/live2d/
 CubismSdkForNative-*/
+
+# Generated licensed SDK staging and shared iOS runtime copy
+packages/pocket_live2d_native/cubism/
+packages/pocket_live2d_native/ios/Cubism/
+packages/pocket_live2d_native/ios/Classes/Runtime/

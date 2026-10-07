@@ -9,7 +9,13 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
 
     private let faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private let orientationStreamHandler = PocketLive2dStreamHandler()
-    private let renderer: PocketLive2dRenderer = PendingCubismRenderer()
+    private let statusStreamHandler = PocketLive2dStreamHandler()
+    private var renderer: PocketLive2dCubismRenderer!
+    private var notifications: [NSObjectProtocol] = []
+    private var initialized = false
+    private lazy var shakeController = PocketLive2dShakeController { [weak self] in
+        self?.renderer.playMotion(group: "Shake", index: nil)
+    }
 
     private lazy var orientationController = PocketLive2dOrientationController {
         [weak self] event in
@@ -40,6 +46,30 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = PocketLive2dNativePlugin()
+        instance.renderer = PocketLive2dCubismRenderer(
+            resolve: { key in
+                let asset = registrar.lookupKey(forAsset: key)
+                return Bundle.main.bundlePath + "/" + asset
+            },
+            status: { [weak instance] event in instance?.statusStreamHandler.emit(event) }
+        )
+        let status = FlutterEventChannel(name: "pocket_live2d/status", binaryMessenger: registrar.messenger())
+        status.setStreamHandler(instance.statusStreamHandler)
+        instance.notifications.append(NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { [weak instance] _ in
+            instance?.orientationController.stop()
+            instance?.faceTrackingController.stop()
+            instance?.shakeController.stop()
+            instance?.renderer.resetInput()
+            instance?.renderer.setPaused(true)
+        })
+        instance.notifications.append(NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main
+        ) { [weak instance] _ in
+            instance?.renderer.setPaused(false)
+            if instance?.initialized == true { instance?.shakeController.start() }
+        })
 
         let methodChannel = FlutterMethodChannel(
             name: methodChannelName,
@@ -68,8 +98,14 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "initialize":
-            renderer.initialize()
-            result(nil)
+            do {
+                try renderer.initialize()
+                initialized = true
+                shakeController.start()
+                result(nil)
+            } catch {
+                result(FlutterError(code: "sdk_unavailable", message: error.localizedDescription, details: nil))
+            }
         case "loadModel":
             handleLoadModel(call, result: result)
         case "playMotion":
@@ -82,9 +118,22 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
             handleSetMimicEnabled(call, result: result)
         case "lookAt":
             handleLookAt(call, result: result)
+        case "tapAt":
+            guard let args = call.arguments as? [String: Any], let x = number(args["x"]), let y = number(args["y"]) else {
+                result(invalidArgument("x and y are required"))
+                return
+            }
+            renderer.tapAt(x: x, y: y)
+            result(nil)
+        case "setWallpaper":
+            result(FlutterError(code: "unsupported_platform", message: "Live Wallpaper is Android-only", details: nil))
         case "dispose":
             orientationController.stop()
             faceTrackingController.stop()
+            shakeController.stop()
+            initialized = false
+            notifications.forEach { NotificationCenter.default.removeObserver($0) }
+            notifications.removeAll()
             renderer.dispose()
             faceTrackingStreamHandler.clear()
             orientationStreamHandler.clear()
@@ -148,10 +197,15 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
 
         if !enabled {
             orientationController.stop()
+            renderer.resetInput()
             result(nil)
             return
         }
 
+        guard UIApplication.shared.applicationState != .background else {
+            result(FlutterError(code: "app_in_background", message: "Foreground app required", details: nil))
+            return
+        }
         faceTrackingController.stop()
 
         guard orientationController.isSupported else {
@@ -190,10 +244,15 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
 
         if !enabled {
             faceTrackingController.stop()
+            renderer.resetInput()
             result(nil)
             return
         }
 
+        guard UIApplication.shared.applicationState != .background else {
+            result(FlutterError(code: "app_in_background", message: "Foreground app required", details: nil))
+            return
+        }
         orientationController.stop()
 
         guard faceTrackingController.isSupported else {
@@ -233,7 +292,8 @@ public final class PocketLive2dNativePlugin: NSObject, FlutterPlugin {
 
         renderer.lookAt(
             x: min(max(x, -1), 1),
-            y: min(max(y, -1), 1)
+            y: min(max(y, -1), 1),
+            active: args["active"] as? Bool ?? true
         )
         result(nil)
     }

@@ -18,9 +18,13 @@ class CharacterInteractionCoordinator {
 
   Future<void> stop() {
     // Cancel an outstanding permission/startup request before waiting for it.
-    final cancellation = controller.setMimicEnabled(false);
+    final cancellation = controller.setMimicEnabled(false).then<(Object, StackTrace)?>(
+      (_) => null,
+      onError: (Object error, StackTrace stack) => (error, stack),
+    );
     final operation = _pending.then((_) async {
-      await cancellation;
+      final failure = await cancellation;
+      if (failure != null) Error.throwWithStackTrace(failure.$1, failure.$2);
       await _applyMode(CharacterInputMode.idle);
       _mode = CharacterInputMode.idle;
     });

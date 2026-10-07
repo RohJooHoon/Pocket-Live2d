@@ -4,17 +4,18 @@ import UIKit
 final class PocketLive2dPlatformView: NSObject, FlutterPlatformView {
     private let rootView: UIView
     private let creationParams: [String: Any]
-    private let renderer: PocketLive2dRenderer
+    private let renderer: PocketLive2dCubismRenderer
 
     init(
         frame: CGRect,
         viewIdentifier viewId: Int64,
         arguments args: Any?,
-        renderer: PocketLive2dRenderer
+        renderer: PocketLive2dCubismRenderer
     ) {
         creationParams = args as? [String: Any] ?? [:]
         self.renderer = renderer
-        rootView = UIView(frame: frame)
+        rootView = renderer.view
+        rootView.frame = frame
         super.init()
 
         rootView.backgroundColor = Self.resolveBackgroundColor(
@@ -48,16 +49,13 @@ final class PocketLive2dPlatformView: NSObject, FlutterPlatformView {
         return UIColor(red: r, green: g, blue: b, alpha: a)
     }
 
-    deinit {
-        // The renderer is plugin-scoped. Surface-specific cleanup will be
-        // added when the Cubism renderer owns this view's render surface.
-    }
+    deinit { renderer.setPaused(true) }
 }
 
 final class PocketLive2dViewFactory: NSObject, FlutterPlatformViewFactory {
-    private let renderer: PocketLive2dRenderer
+    private let renderer: PocketLive2dCubismRenderer
 
-    init(renderer: PocketLive2dRenderer) {
+    init(renderer: PocketLive2dCubismRenderer) {
         self.renderer = renderer
         super.init()
     }

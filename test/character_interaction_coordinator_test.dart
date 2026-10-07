@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket_live2d/live2d/interaction/character_input_mode.dart';
 import 'package:pocket_live2d/live2d/interaction/character_interaction_coordinator.dart';
@@ -8,6 +10,7 @@ import 'package:pocket_live2d/live2d/models/orientation_state.dart';
 class _FakeLive2DController implements Live2DController {
   final List<String> calls = [];
   String? failOnCall;
+  Completer<void>? mimicStartup;
 
   @override
   Stream<FaceTrackingState> get faceTrackingStates =>
@@ -24,7 +27,13 @@ class _FakeLive2DController implements Live2DController {
   Future<void> loadModel(String modelId) async => calls.add('loadModel:$modelId');
 
   @override
-  Future<void> lookAt(double x, double y) async => calls.add('lookAt:$x,$y');
+  Future<void> lookAt(double x, double y, {bool active = true}) async => calls.add('lookAt:$x,$y');
+
+  @override
+  Future<void> tapAt(double x, double y) async {}
+
+  @override
+  Future<void> setWallpaper({String modelId = 'mark'}) async {}
 
   @override
   Future<void> playMotion(String group, {int? index}) async =>
@@ -42,6 +51,10 @@ class _FakeLive2DController implements Live2DController {
   @override
   Future<void> setMimicEnabled(bool enabled) async {
     await _record('mimic:$enabled');
+    if (enabled && mimicStartup != null) await mimicStartup!.future;
+    if (!enabled && mimicStartup != null && !mimicStartup!.isCompleted) {
+      mimicStartup!.completeError(StateError('startup cancelled'));
+    }
   }
 
   Future<void> _record(String call) async {
@@ -106,4 +119,27 @@ void main() {
       ['gyro:false', 'mimic:true', 'mimic:false', 'gyro:true'],
     );
   });
+  test('concurrent mode requests are serialized', () async {
+    final controller = _FakeLive2DController();
+    final coordinator = CharacterInteractionCoordinator(controller);
+    final first = coordinator.setMode(CharacterInputMode.gyro);
+    final second = coordinator.setMode(CharacterInputMode.mimic);
+    await Future.wait([first, second]);
+    expect(coordinator.mode, CharacterInputMode.mimic);
+    expect(controller.calls, ['mimic:false', 'gyro:true', 'gyro:false', 'mimic:true']);
+  });
+
+  test('stop cancels pending camera startup and ends idle', () async {
+    final controller = _FakeLive2DController()..mimicStartup = Completer<void>();
+    final coordinator = CharacterInteractionCoordinator(controller);
+    final startup = coordinator.setMode(CharacterInputMode.mimic);
+    final startupFailure = expectLater(startup, throwsStateError);
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.calls.last, 'mimic:true');
+    await coordinator.stop();
+    await startupFailure;
+    expect(coordinator.mode, CharacterInputMode.idle);
+    expect(controller.calls.last, 'gyro:false');
+  });
+
 }

@@ -6,7 +6,7 @@ import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 
 internal class PocketLive2dViewFactory(
-    private val renderer: PocketLive2dRenderer,
+    private val renderer: PocketLive2dCubismRenderer,
 ) : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
     override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
         @Suppress("UNCHECKED_CAST")
