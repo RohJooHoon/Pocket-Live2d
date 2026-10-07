@@ -31,6 +31,7 @@ internal class PocketLive2dFaceTrackingController(
     private val applicationContext = context.applicationContext
     private val mainExecutor = ContextCompat.getMainExecutor(applicationContext)
     private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val filter = PocketLive2dFaceTrackingFilter()
 
     private var faceLandmarker: FaceLandmarker? = null
     private var cameraProvider: ProcessCameraProvider? = null
@@ -66,6 +67,7 @@ internal class PocketLive2dFaceTrackingController(
         }
 
         stop()
+        filter.reset()
         active = true
         val token = ++sessionId
 
@@ -92,6 +94,7 @@ internal class PocketLive2dFaceTrackingController(
     fun stop() {
         active = false
         sessionId += 1
+        filter.reset()
 
         imageAnalysis?.clearAnalyzer()
         imageAnalysis = null
@@ -254,7 +257,7 @@ internal class PocketLive2dFaceTrackingController(
         if (!isSessionActive(token)) return
 
         if (result.faceLandmarks().isEmpty()) {
-            emitState(token, idleState())
+            emitState(token, filter.apply(idleState()))
             return
         }
 
@@ -324,7 +327,7 @@ internal class PocketLive2dFaceTrackingController(
             "trackingConfidence" to 1.0,
         )
 
-        emitState(token, state)
+        emitState(token, filter.apply(state))
     }
 
     private fun emitState(token: Long, state: Map<String, Double>) {
