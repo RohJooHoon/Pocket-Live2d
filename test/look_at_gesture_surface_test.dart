@@ -117,14 +117,16 @@ void main() {
         home: StatefulBuilder(
           builder: (context, stateSetter) {
             setState = stateSetter;
-            return SizedBox(
-              width: 200,
-              height: 100,
-              child: LookAtGestureSurface(
-                controller: controller,
-                enabled: enabled,
-                minInterval: Duration.zero,
-                child: const ColoredBox(color: Colors.transparent),
+            return Center(
+              child: SizedBox(
+                width: 200,
+                height: 100,
+                child: LookAtGestureSurface(
+                  controller: controller,
+                  enabled: enabled,
+                  minInterval: Duration.zero,
+                  child: const ColoredBox(color: Colors.transparent),
+                ),
               ),
             );
           },
@@ -134,10 +136,11 @@ void main() {
 
     final surface = find.byType(LookAtGestureSurface);
     final topLeft = tester.getTopLeft(surface);
-    await tester.tapAt(topLeft + const Offset(200, 50));
+    await tester.tapAt(topLeft + const Offset(180, 50));
     await tester.pump();
 
-    expect(controller.lookAtCalls.last, const Offset(1, 0));
+    expect(controller.lookAtCalls.last.dx, closeTo(0.8, 0.0001));
+    expect(controller.lookAtCalls.last.dy, 0);
 
     setState(() => enabled = false);
     await tester.pump();
