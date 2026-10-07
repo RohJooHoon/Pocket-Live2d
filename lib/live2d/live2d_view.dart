@@ -15,7 +15,8 @@ class Live2DView extends StatelessWidget {
 
   Map<String, Object?> get _creationParams => {
         if (modelId != null) 'modelId': modelId,
-        if (backgroundColor != null) 'backgroundColor': backgroundColor!.value,
+        if (backgroundColor != null)
+          'backgroundColor': backgroundColor!.toARGB32(),
       };
 
   @override
