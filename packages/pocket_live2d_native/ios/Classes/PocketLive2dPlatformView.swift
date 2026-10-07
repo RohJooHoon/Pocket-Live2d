@@ -4,19 +4,26 @@ import UIKit
 final class PocketLive2dPlatformView: NSObject, FlutterPlatformView {
     private let rootView: UIView
     private let creationParams: [String: Any]
+    private let renderer: PocketLive2dRenderer
 
     init(
         frame: CGRect,
         viewIdentifier viewId: Int64,
-        arguments args: Any?
+        arguments args: Any?,
+        renderer: PocketLive2dRenderer
     ) {
         creationParams = args as? [String: Any] ?? [:]
+        self.renderer = renderer
         rootView = UIView(frame: frame)
         super.init()
 
         rootView.backgroundColor = Self.resolveBackgroundColor(
             creationParams["backgroundColor"]
         )
+
+        if let modelId {
+            renderer.loadModel(modelId: modelId)
+        }
     }
 
     var modelId: String? {
@@ -42,11 +49,19 @@ final class PocketLive2dPlatformView: NSObject, FlutterPlatformView {
     }
 
     deinit {
-        // TODO: Release Metal/OpenGL/Cubism renderer resources owned by this view.
+        // The renderer is plugin-scoped. Surface-specific cleanup will be
+        // added when the Cubism renderer owns this view's render surface.
     }
 }
 
 final class PocketLive2dViewFactory: NSObject, FlutterPlatformViewFactory {
+    private let renderer: PocketLive2dRenderer
+
+    init(renderer: PocketLive2dRenderer) {
+        self.renderer = renderer
+        super.init()
+    }
+
     func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
         FlutterStandardMessageCodec.sharedInstance()
     }
@@ -59,7 +74,8 @@ final class PocketLive2dViewFactory: NSObject, FlutterPlatformViewFactory {
         PocketLive2dPlatformView(
             frame: frame,
             viewIdentifier: viewId,
-            arguments: args
+            arguments: args,
+            renderer: renderer
         )
     }
 }
