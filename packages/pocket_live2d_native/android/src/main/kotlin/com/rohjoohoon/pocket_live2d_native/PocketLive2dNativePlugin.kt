@@ -13,6 +13,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
 
     private val faceTrackingStreamHandler = PocketLive2dStreamHandler()
     private val orientationStreamHandler = PocketLive2dStreamHandler()
+    private val renderer: PocketLive2dRenderer = PendingCubismRenderer()
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel = MethodChannel(binding.binaryMessenger, METHOD_CHANNEL)
@@ -27,18 +28,26 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
         orientationController = PocketLive2dOrientationController(
             binding.applicationContext,
         ) { event ->
+            renderer.applyOrientation(
+                x = (event["x"] as? Number)?.toDouble() ?: 0.0,
+                y = (event["y"] as? Number)?.toDouble() ?: 0.0,
+                z = (event["z"] as? Number)?.toDouble() ?: 0.0,
+            )
             orientationStreamHandler.emit(event)
         }
 
         binding.platformViewRegistry.registerViewFactory(
             VIEW_TYPE,
-            PocketLive2dViewFactory(),
+            PocketLive2dViewFactory(renderer),
         )
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "initialize" -> result.success(null)
+            "initialize" -> {
+                renderer.initialize()
+                result.success(null)
+            }
             "loadModel" -> handleLoadModel(call, result)
             "playMotion" -> handlePlayMotion(call, result)
             "setExpression" -> handleSetExpression(call, result)
@@ -47,6 +56,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             "lookAt" -> handleLookAt(call, result)
             "dispose" -> {
                 orientationController.stop()
+                renderer.dispose()
                 faceTrackingStreamHandler.clear()
                 orientationStreamHandler.clear()
                 result.success(null)
@@ -62,7 +72,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
-        // TODO: Route to the Cubism model repository once the SDK is linked.
+        renderer.loadModel(modelId)
         result.success(null)
     }
 
@@ -73,7 +83,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
-        // TODO: Route group/index to the Cubism motion controller.
+        renderer.playMotion(group, call.argument<Int>("index"))
         result.success(null)
     }
 
@@ -84,7 +94,7 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
-        // TODO: Route to Cubism expression handling.
+        renderer.setExpression(expressionId)
         result.success(null)
     }
 
@@ -141,12 +151,13 @@ class PocketLive2dNativePlugin : FlutterPlugin, MethodChannel.MethodCallHandler 
             return
         }
 
-        // TODO: Route normalized coordinates to ParamEyeBallX/Y and head target.
+        renderer.lookAt(x.coerceIn(-1.0, 1.0), y.coerceIn(-1.0, 1.0))
         result.success(null)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         orientationController.stop()
+        renderer.dispose()
         methodChannel.setMethodCallHandler(null)
         faceTrackingChannel.setStreamHandler(null)
         orientationChannel.setStreamHandler(null)
