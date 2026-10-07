@@ -1,35 +1,17 @@
-.dart_tool/
-.packages
-.pub/
-build/
+# Node / Vite
+node_modules/
+dist/
+.public/
 coverage/
-.flutter-plugins
-.flutter-plugins-dependencies
-.metadata
+*.log
 
 # IDE
 .idea/
 *.iml
 .vscode/
+.DS_Store
 
-# Android
-android/.gradle/
-android/local.properties
-android/**/GeneratedPluginRegistrant.java
-packages/pocket_live2d_native/android/src/main/assets/face_landmarker.task
-
-# iOS
-**/Pods/
-**/.symlinks/
-**/Flutter/ephemeral/
-**/DerivedData/
-
-# Live2D SDK / Core binaries
-vendor/live2d/
-third_party/live2d/
+# Live2D Cubism SDK for Web (licensed; staged locally by tool/prepare_cubism_web.py)
+vendor/
+CubismSdkForWeb-*/
 CubismSdkForNative-*/
-
-# Generated licensed SDK staging and shared iOS runtime copy
-packages/pocket_live2d_native/cubism/
-packages/pocket_live2d_native/ios/Cubism/
-packages/pocket_live2d_native/ios/Classes/Runtime/

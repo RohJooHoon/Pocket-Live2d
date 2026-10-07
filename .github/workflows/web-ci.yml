@@ -1,0 +1,51 @@
+name: Web CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate bundled Live2D models
+        run: python3 tool/validate_model_assets.py
+
+      - name: Check setup script syntax
+        run: python3 -m py_compile tool/*.py
+
+      - name: Unit tests
+        run: npm test
+
+      # Public CI has no Cubism SDK, so this builds the SDK-less page (typecheck included).
+      - name: Build every character site
+        run: |
+          for dir in characters/*/; do
+            CHARACTER="$(basename "$dir")" npm run build
+          done
+
+      - name: Make sure no Cubism SDK files were published
+        run: |
+          if find dist -name 'live2dcubismcore*' -o -name '*.frag' -o -name '*.vert' | grep -q .; then
+            echo "Cubism SDK files found in the SDK-less build output" >&2
+            exit 1
+          fi
