@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'live2d/interaction/character_input_mode.dart';
 import 'live2d/interaction/character_interaction_coordinator.dart';
+import 'live2d/interaction/look_at_gesture_surface.dart';
 import 'live2d/live2d_method_channel.dart';
 import 'live2d/live2d_view.dart';
 
@@ -100,6 +101,8 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final touchLookAtEnabled = _inputMode != CharacterInputMode.mimic;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Pocket Live2D')),
       body: SafeArea(
@@ -114,7 +117,11 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      const Live2DView(),
+                      LookAtGestureSurface(
+                        controller: _controller,
+                        enabled: touchLookAtEnabled,
+                        child: const Live2DView(),
+                      ),
                       Align(
                         alignment: Alignment.topCenter,
                         child: Padding(
@@ -186,9 +193,9 @@ class _CharacterHomePageState extends State<CharacterHomePage> {
               Text(
                 switch (_inputMode) {
                   CharacterInputMode.idle =>
-                    'Idle Motion과 터치 상호작용만 사용합니다.',
+                    '화면을 터치하거나 드래그하면 캐릭터가 시선을 따라갑니다.',
                   CharacterInputMode.gyro =>
-                    '기울기에 따라 눈·머리·몸이 반응합니다.',
+                    '기울기에 반응하며 터치·드래그로 시선을 움직일 수 있습니다.',
                   CharacterInputMode.mimic =>
                     '전면 카메라로 얼굴 움직임을 추적합니다.',
                 },
