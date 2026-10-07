@@ -83,4 +83,4 @@ MVP 완료는 iPhone/Galaxy 실제 표시와 상호작용, 카메라 즉시 종�
 - `assets/live2d/mark/`: 공식 테스트 모델과 테스트 표정
 - `tool/`: 호스트 구성, SDK 준비, 모델 검사
 
-[Native bridge 계약](NATIVE_BRIDGE.md) · [얼굴 추적](FACE_TRACKING.md)
+[Native bridge 계약](NATIVE_BRIDGE.md) · [얼굴 추적](FACE_TRACKING.md) · [실기기 실행·테스트](DEVICE_TESTING.md)
