@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -110,16 +112,35 @@ void main() {
       expect(find.text('동의하고 시작하기'), findsOneWidget);
     });
 
-    testWidgets('opens the bundled terms from the consent screen',
+    testWidgets('opens the terms page from the consent screen',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
 
       await tester.pumpWidget(gate());
       await tester.pumpAndSettle();
       await tester.tap(find.text(LegalDocument.termsOfService.title));
-      await tester.pumpAndSettle();
+      // The page shows a loading indicator until the asset arrives, which
+      // never happens inside fake async, so do not wait for it to settle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('MotionMate 이용약관'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppBar, LegalDocument.termsOfService.title),
+        findsOneWidget,
+      );
     });
+  });
+
+  testWidgets('renders a bundled document', (tester) async {
+    final source = File(LegalDocument.termsOfService.assetPath).readAsStringSync();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: LegalDocumentView(blocks: parseLegalMarkdown(source))),
+      ),
+    );
+
+    expect(find.text('MotionMate 이용약관'), findsOneWidget);
+    expect(find.text('제1조 (목적)'), findsOneWidget);
   });
 }
