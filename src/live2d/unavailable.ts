@@ -11,6 +11,7 @@ export const createRenderer: CreateRenderer = (options) => {
     releaseLook: () => {},
     tap: () => false,
     setTiltOffsets: () => {},
+    setFaceParameters: () => {},
     playMotion: () => {},
     cycleExpression: () => null,
     setPaused: () => {},

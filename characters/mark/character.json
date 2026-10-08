@@ -1,6 +1,7 @@
 {
   "id": "mark",
   "name": "Mark-kun",
+  "pagesProject": "pocket-live2d",
   "model": "Mark.model3.json",
   "idleMotion": "Idle",
   "tapMotion": "TapBody",

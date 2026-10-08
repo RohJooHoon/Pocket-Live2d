@@ -1,15 +1,20 @@
-# MotionMate
+# Pocket Live2D
 
 휴대폰을 기울이고, 흔들고, 화면을 만지면 반응하는 **Live2D 캐릭터 웹페이지**입니다.
-캐릭터 하나가 사이트 하나가 되며, 도메인마다 다른 캐릭터를 올리고 QR 코드로 접속하는 용도를 기준으로 만들었습니다.
+같은 사이트에서 `/haru`, `/mark`처럼 URL 경로로 캐릭터를 고릅니다. 모델 데이터를 Cloudflare R2에 두면 폴더 업로드만으로 새 캐릭터를 추가할 수 있습니다.
 
 - 기울이기·흔들기: 기기 동작 센서 (iPhone은 버튼을 눌러 권한 허용)
 - 터치: 드래그하면 시선이 따라오고, 캐릭터를 탭하면 반응 모션
+- 얼굴 따라하기: 전면 카메라로 고개·눈·입·눈썹 움직임 반영 (직접 켜고 권한 허용, 영상은 기기 안에서 처리)
+- 얼굴 미리보기는 영상 대신 트래킹 포인트만 표시
+- UI 숨기기: 캐릭터만 보기, 화면을 10초 길게 누르면 UI 복귀
+- 모바일 세로 전용: 가로로 돌리면 세로 안내를 표시하고 조작 차단
+- URL 경로별 모델 로딩: R2 또는 같은 출처 `/models/`에서 캐릭터 데이터 읽기
 - 첫 방문 때 이용약관·개인정보처리방침 동의
 - 캐릭터 렌더링: Live2D Cubism SDK for Web 5-r.5 (저장소에는 포함하지 않음)
 
 > 이전에는 Flutter 앱(Pocket Live2D)이었고, 웹으로 전환했습니다. 앱 코드는 git 기록에 남아 있습니다.
-> MotionMate는 작업 이름입니다. 같은 이름을 쓰는 앱이 있어 공개 전에 이름을 확정해야 합니다. 이름은 `src/config.ts` 한 곳에서 바꿉니다.
+> 서비스 이름은 Pocket Live2D, npm 패키지 이름은 `pocket-live2d`입니다. 화면 이름은 `src/config.ts`에서 관리합니다. Live2D 상표 사용 조건은 [라이선스 문서](docs/LICENSING.md)를 확인하세요.
 
 ## 빠른 시작
 
@@ -21,6 +26,8 @@ npm run dev          # http://localhost:5173
 ```
 
 SDK 없이 실행하면 화면에 "Live2D SDK가 연결되지 않은 빌드예요"가 나옵니다. 정상입니다.
+첫 `dev`·`build` 실행은 공식 MediaPipe 얼굴 추적 모델(약 3.8 MB)을 내려받아 SHA-256을 검증하고 `vendor/mediapipe/`에 캐시합니다.
+WASM과 모델은 빌드에 포함해 자체 호스팅합니다. 캐시가 없으면 빌드 시 인터넷 연결이 필요합니다.
 
 ### 캐릭터가 보이게 하려면 (Cubism SDK for Web)
 
@@ -44,6 +51,28 @@ npm run dev:https    # https://<PC의 IP>:5173 (자체 서명 인증서 경고�
 
 기기별 테스트 방법, 박람회 태블릿 설정, 배포와 QR 코드는 [웹 테스트·배포 가이드](docs/WEB_TESTING.md)에 있습니다.
 
+### 얼굴 따라하기
+
+캐릭터가 표시된 뒤 **얼굴 따라하기 켜기**를 누르고 카메라 접근을 허용합니다.
+작은 미리보기에는 얼굴 트래킹 포인트만 표시하고 실제 카메라 영상은 화면에 표시하지 않습니다.
+얼굴이 감지되면 첫 자세를 정면으로 보정하며, 고개 방향·눈 깜빡임·입 벌리기·눈썹을 반영합니다.
+미소·시선은 모델에 해당 파라미터가 있는 범위에서 반영됩니다. Mark에는 입 모양(`ParamMouthForm`)이 없어 미소 모양은 바뀌지 않습니다.
+
+카메라 모드에서는 기울이기·흔들기를 잠시 중지하고, 드래그 시선이 고개·시선보다 우선합니다.
+기능을 끄거나 다른 탭으로 이동하거나 모바일을 가로로 돌리면 카메라 촬영도 종료됩니다. 다시 사용하려면 직접 켜야 합니다.
+웹 카메라에는 HTTPS 또는 localhost가 필요합니다. 모바일 HTTP IP 주소에서는 켜지지 않습니다.
+
+추론은 Worker에서 최대 15 fps로 수행하고 한 프레임씩 처리합니다. 카메라 영상·얼굴 값은 저장·전송하지 않습니다.
+MediaPipe의 성능·사용 지표는 Google의 [개인정보 안내](https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice)를 따릅니다.
+실제 iPhone·Android의 추적 감도와 프레임 속도는 실기기 확인이 필요합니다.
+
+### 캐릭터만 보기
+
+상단 **UI 숨기기**를 누르면 제목·정보·조작 버튼·상태 메시지·얼굴 포인트 창을 모두 숨깁니다.
+캐릭터 재생·터치·켜 둔 얼굴 따라하기는 계속 작동합니다. 화면의 같은 자리를 **10초 동안 계속 누르면** UI가 다시 나타납니다.
+손을 떼거나 16px를 넘게 이동하거나 다른 손가락을 대면 복귀 타이머가 취소됩니다. 탭 이탈·화면 회전·포인터 캡처 손실도 타이머를 취소합니다.
+PC에서는 **Escape**로도 UI를 다시 표시할 수 있습니다. 모바일 가로의 세로 안내는 유지하며, 숨김 상태는 새로고침 후 유지하지 않습니다.
+
 ### 인터넷에 올리기 (Cloudflare Pages)
 
 SDK가 준비된 PC에서 빌드해 Cloudflare Pages에 직접 업로드합니다. 주소는 `https://<프로젝트>.pages.dev`로 바로 https입니다.
@@ -53,10 +82,27 @@ npx wrangler login         # 처음 한 번 (Node.js 22 이상 필요)
 npm run deploy -- mark     # 빌드 → Core 포함 확인 → 업로드
 ```
 
+기본 사이트의 Cloudflare Pages 프로젝트는 `pocket-live2d`, 배포 주소는 `https://pocket-live2d.pages.dev`입니다.
+`characters/mark/character.json`의 `pagesProject`로 지정하며, 다른 캐릭터는 별도 설정이 없으면 `pocket-live2d-<id>`를 사용합니다.
+이 설정으로 배포하면 새 프로젝트를 만들거나 같은 이름의 기존 프로젝트를 갱신합니다. 이전 프로젝트의 이름이나 도메인을 자동으로 옮기지는 않습니다.
+
 Cloudflare의 GitHub 연동 자동 빌드는 쓰지 않습니다. Cloudflare 서버에는 SDK가 없고, SDK를 저장소에 넣을 수도 없기 때문입니다.
 커스텀 도메인 연결과 QR 코드는 [웹 테스트·배포 가이드 7장](docs/WEB_TESTING.md#7-배포와-qr-코드-cloudflare-pages)을 보세요.
 
-## 캐릭터 사이트 만들기
+## R2에 모델만 추가하기
+
+처음 `.env.local`에 `VITE_MODEL_BASE_URL=https://모델-저장소-공개주소/models/`를 설정하고 사이트를 배포합니다.
+이후 새 캐릭터는 모델 폴더와 `character.json`을 R2의 `models/<이름>/`에 올리면 `/<이름>`에서 읽습니다. 코드나 모델 목록을 수정하거나 사이트를 다시 빌드할 필요는 없습니다.
+R2 버킷 공개 설정과 CORS가 필요하며, 모델의 `.moc3`·텍스처·모션 등 참조 파일도 함께 올립니다. API 키는 사이트에 넣지 않습니다.
+
+```bash
+npm run model:prepare -- haru /path/to/Haru --name "하루"
+```
+
+`.model-uploads/models/haru/`가 만들어집니다. 모델 JSON의 참조 파일만 복사하고 이름·모델 파일·모션 그룹을 담은 `character.json`을 생성합니다.
+기본 `/`는 사이트에 함께 넣은 데모를 유지하고, 경로가 지정되면 해당 폴더를 읽습니다. 상세 설정과 업로드 방법: [R2 모델 저장과 URL 연결](docs/R2_MODELS.md).
+
+## 기본 캐릭터를 사이트와 함께 빌드하기
 
 캐릭터마다 `characters/<id>/` 폴더를 만듭니다.
 
@@ -100,6 +146,7 @@ $env:CHARACTER="mark"; npm run build    # Windows PowerShell
 | `npm run typecheck:sdk` | SDK 렌더러까지 타입 검사 (SDK를 준비한 뒤) |
 | `npm run build` | 캐릭터 사이트 빌드 (`CHARACTER`로 캐릭터 선택, 기본 mark) |
 | `npm run validate:models` | 모델 파일 참조와 파일 형식 검사 |
+| `npm run model:prepare -- <이름> <모델폴더>` | R2 업로드용 참조 파일과 character.json 준비 |
 
 ## 구조
 
@@ -123,7 +170,7 @@ SDK가 없을 때도 페이지가 멈추지 않도록, Cubism Framework는 Core�
 ## 이용약관·라이선스
 
 - [이용약관](legal/terms_of_service.md): Live2D Cubism Core와 캐릭터 데이터 보호 조항 포함
-- [개인정보처리방침](legal/privacy_policy.md): 센서·터치 값은 기기 안에서만 처리, 카메라 미사용
+- [개인정보처리방침](legal/privacy_policy.md): 센서·터치·카메라 영상은 기기 안에서만 처리, MediaPipe 지표 처리 안내
 - [라이선스와 공개 준비](docs/LICENSING.md): Live2D 약관 판단, 공개 전 체크리스트, 박람회·외주·유료화 검토
 
 `Mark`는 Live2D 공식 샘플 모델이며 사용 조건은 [모델 README](characters/mark/model/README.md)에 있습니다.

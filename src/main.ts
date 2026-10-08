@@ -1,9 +1,13 @@
 import './style.css';
 
 import { createRenderer } from '@cubism-adapter';
+import { loadCharacter } from './characters/loadCharacter';
 import privacyPolicy from '../legal/privacy_policy.md?raw';
 import termsOfService from '../legal/terms_of_service.md?raw';
 import { SERVICE_NAME } from './config';
+import { FaceTracker } from './input/faceTracker';
+import { drawFacePoints } from './input/facePoints';
+import { HoldToRestore } from './input/holdToRestore';
 import { MotionSensors, requestMotionPermission } from './input/motionSensors';
 import { TapTracker } from './input/tap';
 import { NEUTRAL_ORIENTATION, OrientationFilter, tiltToParameters } from './input/tilt';
@@ -12,7 +16,7 @@ import { parseLegalMarkdown, renderLegalBlocks } from './legal/markdown';
 import type { CharacterRenderer, RendererStatus } from './live2d/renderer';
 import type { OrientationState } from './types';
 
-const character = __CHARACTER__;
+let character = __CHARACTER__;
 
 const documents = {
   terms: { title: '이용약관', source: termsOfService },
@@ -34,12 +38,20 @@ const expressionButton = element<HTMLButtonElement>('expression-button');
 const consentDialog = element<HTMLDialogElement>('consent-dialog');
 const infoDialog = element<HTMLDialogElement>('info-dialog');
 const documentDialog = element<HTMLDialogElement>('document-dialog');
+const portraitDialog = element<HTMLDialogElement>('portrait-dialog');
+const cameraToggle = element<HTMLButtonElement>('camera-toggle');
+const cameraPreview = element('camera-preview');
+const cameraStatus = element('camera-status');
+const cameraVideo = element<HTMLVideoElement>('camera-video');
+const facePointsCanvas = element<HTMLCanvasElement>('face-points');
+const mobileLandscape = window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: landscape)');
 
-document.title = `${character.name} · ${SERVICE_NAME}`;
-element('character-name').textContent = character.name;
-element('consent-title').textContent = `${SERVICE_NAME}를 시작하기 전에`;
+document.title = SERVICE_NAME;
+element('service-name').textContent = SERVICE_NAME;
+element('character-name').textContent = '캐릭터';
+element('consent-title').textContent = `${SERVICE_NAME} 시작하기`;
 element('info-title').textContent = SERVICE_NAME;
-element('info-credit').textContent = character.credit ?? '';
+element('info-credit').textContent = '';
 
 // --- Status line -----------------------------------------------------------
 
@@ -94,14 +106,38 @@ element('info-button').addEventListener('click', () => infoDialog.showModal());
 
 let renderer: CharacterRenderer | null = null;
 let ready = false;
+let characterStarted = false;
 
 function startCharacter(): void {
+  if (characterStarted) return;
+  characterStarted = true;
+  wirePointer();
+  wireButtons();
+  wireVisibility();
+  void loadAndStartCharacter();
+}
+
+async function loadAndStartCharacter(): Promise<void> {
   showStatus();
+  let modelDirectory: string;
+  try {
+    const selected = await loadCharacter(window.location.pathname, __MODEL_BASE_URL__, __CHARACTER__, window.location.origin);
+    character = selected.character;
+    modelDirectory = selected.modelDirectory;
+    document.title = `${character.name} · ${SERVICE_NAME}`;
+    element('character-name').textContent = character.name;
+    element('info-credit').textContent = character.credit ?? '';
+  } catch (error) {
+    console.error('Character:', error);
+    rendererMessage = error instanceof Error ? error.message : '캐릭터를 불러오지 못했어요.';
+    showStatus();
+    return;
+  }
   renderer = createRenderer({
     canvas,
-    modelDirectory: './model/',
+    modelDirectory,
     modelFile: character.model,
-    shaderDirectory: './cubism/shaders/WebGL/',
+    shaderDirectory: '/cubism/shaders/WebGL/',
     idleMotion: character.idleMotion,
     tapMotion: character.tapMotion,
     onStatus: (status) => {
@@ -109,13 +145,13 @@ function startCharacter(): void {
       ready = status.state === 'ready';
       reactButton.disabled = !ready;
       expressionButton.disabled = !ready;
+      cameraToggle.disabled = !ready && !camera.isEnabled;
       rendererMessage = describeStatus(status);
       showStatus();
+      if (status.state === 'error' && camera.isEnabled) camera.stop();
     },
   });
-  wirePointer();
-  wireButtons();
-  wireVisibility();
+  syncRuntimeState();
 }
 
 function canvasPoint(event: PointerEvent): { x: number; y: number } {
@@ -123,10 +159,50 @@ function canvasPoint(event: PointerEvent): { x: number; y: number } {
   return { x: event.clientX - rect.left, y: event.clientY - rect.top };
 }
 
-function wirePointer(): void {
-  const taps = new TapTracker();
+const taps = new TapTracker();
+let uiHidden = false;
+const restoreHold = new HoldToRestore(() => {
+  cancelPointerGesture();
+  setUiHidden(false);
+});
 
+function cancelPointerGesture(): void {
+  restoreHold.cancelAll();
+  const pointerId = taps.activePointerId;
+  if (pointerId != null) {
+    taps.cancel(pointerId);
+    if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+  }
+  renderer?.releaseLook();
+}
+
+function setUiHidden(hidden: boolean): void {
+  restoreHold.cancelAll();
+  uiHidden = hidden;
+  if (hidden) {
+    if (infoDialog.open) infoDialog.close();
+    if (documentDialog.open) documentDialog.close();
+    // Do not leave keyboard focus on a control which has become invisible.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  }
+  document.body.classList.toggle('ui-hidden', hidden);
+}
+
+element('hide-ui-button').addEventListener('click', () => setUiHidden(true));
+window.addEventListener('blur', cancelPointerGesture);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && uiHidden) setUiHidden(false);
+});
+
+function wirePointer(): void {
   canvas.addEventListener('pointerdown', (event) => {
+    if (isRuntimePaused()) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (uiHidden) {
+      event.preventDefault();
+      if (event.isPrimary) restoreHold.down(event.pointerId, event.clientX, event.clientY);
+      else restoreHold.cancelAll();
+    }
     if (!taps.down(event.pointerId, event.clientX, event.clientY, event.timeStamp)) return;
     canvas.setPointerCapture(event.pointerId);
     const point = canvasPoint(event);
@@ -134,12 +210,14 @@ function wirePointer(): void {
   });
 
   canvas.addEventListener('pointermove', (event) => {
+    restoreHold.move(event.pointerId, event.clientX, event.clientY);
     if (!taps.move(event.pointerId, event.clientX, event.clientY)) return;
     const point = canvasPoint(event);
     renderer?.lookAt(point.x, point.y);
   });
 
   canvas.addEventListener('pointerup', (event) => {
+    restoreHold.cancel(event.pointerId);
     const result = taps.up(event.pointerId, event.timeStamp);
     if (!result.tracked) return;
     renderer?.releaseLook();
@@ -150,7 +228,15 @@ function wirePointer(): void {
   });
 
   canvas.addEventListener('pointercancel', (event) => {
+    restoreHold.cancel(event.pointerId);
     if (taps.cancel(event.pointerId)) renderer?.releaseLook();
+  });
+  canvas.addEventListener('lostpointercapture', (event) => {
+    restoreHold.cancel(event.pointerId);
+    if (taps.cancel(event.pointerId)) renderer?.releaseLook();
+  });
+  canvas.addEventListener('contextmenu', (event) => {
+    if (uiHidden) event.preventDefault();
   });
 }
 
@@ -160,6 +246,7 @@ const tiltFilter = new OrientationFilter();
 let tiltTarget: OrientationState = { ...NEUTRAL_ORIENTATION };
 let tiltFrame = 0;
 let lastTiltTime = 0;
+let motionEnabled = false;
 
 const sensors = new MotionSensors({
   onTilt: (state) => {
@@ -178,18 +265,34 @@ function tiltLoop(time: number): void {
 }
 
 function setMotionEnabled(enabled: boolean): void {
+  motionEnabled = enabled;
   motionToggle.setAttribute('aria-pressed', String(enabled));
-  motionToggle.textContent = enabled ? '기울이기·흔들기 끄기' : '기울이기·흔들기 켜기';
-  if (enabled) {
+  motionToggle.setAttribute('aria-label', enabled ? '기울이기·흔들기 끄기' : '기울이기·흔들기 켜기');
+  element('motion-label').textContent = enabled ? '기울이기 끄기' : '기울이기 켜기';
+  syncRuntimeState();
+}
+
+function isRuntimePaused(): boolean {
+  return document.visibilityState === 'hidden' || mobileLandscape.matches;
+}
+
+function syncRuntimeState(): void {
+  const paused = isRuntimePaused();
+  renderer?.setPaused(paused);
+  if (paused) cancelPointerGesture();
+  if (paused && camera.isEnabled) {
+    camera.stop();
+    return;
+  }
+  cancelAnimationFrame(tiltFrame);
+  if (motionEnabled && !paused && !camera.isEnabled) {
     tiltTarget = { ...NEUTRAL_ORIENTATION };
     tiltFilter.reset();
     sensors.start();
     lastTiltTime = 0;
-    cancelAnimationFrame(tiltFrame);
     tiltFrame = requestAnimationFrame(tiltLoop);
   } else {
     sensors.stop();
-    cancelAnimationFrame(tiltFrame);
     tiltFilter.reset();
     renderer?.setTiltOffsets(null);
   }
@@ -197,7 +300,7 @@ function setMotionEnabled(enabled: boolean): void {
 
 function wireButtons(): void {
   motionToggle.addEventListener('click', async () => {
-    if (sensors.isRunning) {
+    if (motionEnabled) {
       setMotionEnabled(false);
       return;
     }
@@ -219,19 +322,67 @@ function wireButtons(): void {
 }
 
 function wireVisibility(): void {
-  document.addEventListener('visibilitychange', () => {
-    const hidden = document.visibilityState === 'hidden';
-    renderer?.setPaused(hidden);
-    if (!sensors.isRunning) return;
-    if (hidden) {
-      cancelAnimationFrame(tiltFrame);
-    } else {
-      sensors.recalibrate();
-      lastTiltTime = 0;
-      tiltFrame = requestAnimationFrame(tiltLoop);
-    }
-  });
+  document.addEventListener('visibilitychange', syncRuntimeState);
 }
+
+// Ordinary browser tabs cannot reliably lock orientation (notably on iPhone).
+// The non-dismissible modal prevents landscape use without losing open sheets.
+function refreshPortraitGate(): void {
+  if (mobileLandscape.matches) {
+    if (!portraitDialog.open) portraitDialog.showModal();
+  } else if (portraitDialog.open) {
+    portraitDialog.close();
+  }
+  syncRuntimeState();
+}
+
+function tryPortraitLock(): void {
+  if (!window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const orientation = screen.orientation as ScreenOrientation & {
+    lock?: (orientation: 'portrait') => Promise<void>;
+  };
+  // Unsupported and fullscreen-only browsers use the portrait gate instead.
+  if (typeof orientation?.lock === 'function') void orientation.lock('portrait').catch(() => {});
+}
+
+// --- Camera -----------------------------------------------------------------
+
+let cameraWasEnabled = false;
+const camera = new FaceTracker({
+  video: cameraVideo,
+  onParameters: (parameters) => renderer?.setFaceParameters(parameters),
+  onLandmarks: (points) => drawFacePoints(facePointsCanvas, points, cameraVideo),
+  onStatus: (status) => {
+    const enabled = camera.isEnabled;
+    cameraToggle.setAttribute('aria-pressed', String(enabled));
+    cameraToggle.setAttribute('aria-label', status.state === 'starting' ? '카메라 준비 취소' :
+      enabled ? '얼굴 따라하기 끄기' : '얼굴 따라하기 켜기');
+    element('camera-label').textContent = status.state === 'starting' ? '준비 취소' :
+      enabled ? '따라하기 끄기' : '따라하기 켜기';
+    cameraToggle.disabled = !ready && !enabled;
+    cameraPreview.hidden = !enabled;
+    cameraStatus.textContent = status.state === 'starting' ? '카메라 준비 중…' :
+      status.state === 'running' && status.faceFound ? '따라하는 중 · 기기 내 처리' : '얼굴을 보여 주세요';
+    if (status.state === 'error') showNotice(status.message);
+    // Inference reports status every frame. Only mode changes affect playback.
+    if (cameraWasEnabled !== enabled) {
+      cameraWasEnabled = enabled;
+      syncRuntimeState();
+    }
+  },
+});
+
+cameraToggle.addEventListener('click', () => {
+  if (camera.isEnabled) camera.stop();
+  else if (ready && !isRuntimePaused()) void camera.start();
+});
+window.addEventListener('pagehide', () => {
+  cancelPointerGesture();
+  camera.stop();
+  setMotionEnabled(false);
+  renderer?.setPaused(true);
+});
+window.addEventListener('pageshow', syncRuntimeState);
 
 // --- Consent gate -----------------------------------------------------------
 
@@ -250,3 +401,9 @@ if (hasAcceptedCurrentTerms(store)) {
   showStatus();
   consentDialog.showModal();
 }
+
+portraitDialog.addEventListener('cancel', (event) => event.preventDefault());
+mobileLandscape.addEventListener('change', refreshPortraitGate);
+document.addEventListener('fullscreenchange', tryPortraitLock);
+refreshPortraitGate();
+tryPortraitLock();

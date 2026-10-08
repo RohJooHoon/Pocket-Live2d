@@ -3,14 +3,14 @@ export interface CharacterConfig {
   id: string;
   /** Name shown on the page. */
   name: string;
-  /** model3.json file name inside characters/<id>/model/. */
+  /** model3.json filename in the selected local or R2 model folder. */
   model: string;
   idleMotion: string;
   tapMotion: string;
   shakeMotion: string;
   /** Rights notice required by the character's license, shown in the info dialog. */
   credit?: string;
-  /** Cloudflare Pages project used by `npm run deploy` (default: motionmate-<id>). */
+  /** Cloudflare Pages project used by `npm run deploy` (default: pocket-live2d-<id>). */
   pagesProject?: string;
 }
 
@@ -31,4 +31,14 @@ export interface ParameterOffsets {
   eyeBallX: number;
   eyeBallY: number;
   bodyAngleX: number;
+}
+
+/** Absolute values supplied by the camera, separate from additive tilt input. */
+export interface FaceParameters extends ParameterOffsets {
+  eyeLOpen: number;
+  eyeROpen: number;
+  mouthOpen: number;
+  mouthForm: number;
+  browLY: number;
+  browRY: number;
 }

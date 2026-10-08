@@ -4,7 +4,7 @@ import { CubismFramework, LogLevel, Option } from '@framework/live2dcubismframew
 import { CubismMatrix44 } from '@framework/math/cubismmatrix44';
 import { CubismWebGLOffscreenManager } from '@framework/rendering/cubismoffscreenmanager';
 
-import type { ParameterOffsets } from '../../types';
+import type { FaceParameters, ParameterOffsets } from '../../types';
 import type { CharacterRenderer, RendererOptions } from '../renderer';
 import { CharacterModel } from './characterModel';
 
@@ -98,6 +98,10 @@ export class CubismCharacterRenderer implements CharacterRenderer {
 
   setTiltOffsets(offsets: ParameterOffsets | null): void {
     this.model?.setTiltOffsets(offsets);
+  }
+
+  setFaceParameters(parameters: FaceParameters | null): void {
+    this.model?.setFaceParameters(parameters);
   }
 
   playMotion(group: string): void {

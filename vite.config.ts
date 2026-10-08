@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { defineConfig, type Plugin } from 'vitest/config';
+import { loadEnv } from 'vite';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const characterId = process.env.CHARACTER ?? 'mark';
@@ -27,14 +28,14 @@ function cubismCoreScript(): Plugin {
       if (!sdkReady) return html;
       return html.replace(
         '<!-- cubism-core -->',
-        '<script src="./cubism/live2dcubismcore.min.js"></script>',
+        '<script src="/cubism/live2dcubismcore.min.js"></script>',
       );
     },
   };
 }
 
 export default defineConfig(({ mode }) => ({
-  base: './',
+  base: '/',
   publicDir: resolve(root, '.public', characterId),
   // Phones only allow motion sensors on secure pages, so `npm run dev:https`
   // serves a self-signed https address for testing over Wi-Fi.
@@ -50,6 +51,7 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     __CHARACTER__: JSON.stringify(character),
+    __MODEL_BASE_URL__: JSON.stringify(loadEnv(mode, root, 'VITE_').VITE_MODEL_BASE_URL ?? ''),
   },
   build: {
     outDir: resolve(root, 'dist', characterId),

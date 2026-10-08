@@ -8,6 +8,7 @@ function fakeRenderer(): CharacterRenderer {
     releaseLook: vi.fn(),
     tap: vi.fn(() => true),
     setTiltOffsets: vi.fn(),
+    setFaceParameters: vi.fn(),
     playMotion: vi.fn(),
     cycleExpression: vi.fn(() => 'happy'),
     setPaused: vi.fn(),
@@ -53,5 +54,17 @@ describe('DeferredRenderer', () => {
     deferred.attach(target);
     expect(target.dispose).toHaveBeenCalled();
     expect(deferred.tap(0, 0)).toBe(false);
+  });
+
+  it('forwards camera values, including clearing them before lazy loading completes', () => {
+    const deferred = new DeferredRenderer();
+    const face = { ...tilt, eyeLOpen: 0, eyeROpen: 1, mouthOpen: 1, mouthForm: 0, browLY: 0, browRY: 0 };
+    deferred.setFaceParameters(face);
+    deferred.setFaceParameters(null);
+    const target = fakeRenderer();
+    deferred.attach(target);
+    expect(target.setFaceParameters).toHaveBeenCalledWith(null);
+    deferred.setFaceParameters(face);
+    expect(target.setFaceParameters).toHaveBeenLastCalledWith(face);
   });
 });

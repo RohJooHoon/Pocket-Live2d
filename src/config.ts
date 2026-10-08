@@ -1,6 +1,6 @@
-/** Working service name. It must never contain the Live2D trademark (license 5.3.1). */
-export const SERVICE_NAME = 'MotionMate';
+/** Service name selected by the project owner. See docs/LICENSING.md for trademark terms. */
+export const SERVICE_NAME = 'Pocket Live2D';
 
 /** Change this when the terms or privacy policy change so visitors accept again. */
-export const LEGAL_CONSENT_VERSION = 'web-2026-10-07.2';
-export const LEGAL_CONSENT_STORAGE_KEY = 'motionmate.legalConsent';
+export const LEGAL_CONSENT_VERSION = 'web-2026-10-08.r2-models';
+export const LEGAL_CONSENT_STORAGE_KEY = 'pocket-live2d.legalConsent';
