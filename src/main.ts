@@ -5,6 +5,7 @@ import { loadCharacter } from './characters/loadCharacter';
 import privacyPolicy from '../legal/privacy_policy.md?raw';
 import termsOfService from '../legal/terms_of_service.md?raw';
 import { SERVICE_NAME } from './config';
+import { ExclusiveInputModes } from './input/exclusiveInputModes';
 import { FaceTracker } from './input/faceTracker';
 import { drawFacePoints } from './input/facePoints';
 import { HoldToRestore } from './input/holdToRestore';
@@ -278,6 +279,7 @@ function isRuntimePaused(): boolean {
 
 function syncRuntimeState(): void {
   const paused = isRuntimePaused();
+  if (paused) inputModes.cancelPendingMotion();
   renderer?.setPaused(paused);
   if (paused) cancelPointerGesture();
   if (paused && camera.isEnabled) {
@@ -299,23 +301,7 @@ function syncRuntimeState(): void {
 }
 
 function wireButtons(): void {
-  motionToggle.addEventListener('click', async () => {
-    if (motionEnabled) {
-      setMotionEnabled(false);
-      return;
-    }
-    const permission = await requestMotionPermission();
-    if (permission === 'granted') {
-      setMotionEnabled(true);
-      showNotice('지금 기기를 든 자세가 기준이 돼요. 기울이거나 흔들어 보세요.');
-    } else if (permission === 'denied') {
-      showNotice('동작 및 방향 접근이 거부됐어요. 브라우저 설정에서 허용해 주세요.');
-    } else if (permission === 'insecure') {
-      showNotice('기울이기는 https 주소에서만 쓸 수 있어요.');
-    } else {
-      showNotice('이 기기에서는 기울이기를 지원하지 않아요.');
-    }
-  });
+  motionToggle.addEventListener('click', () => { void inputModes.toggleMotion(); });
 
   reactButton.addEventListener('click', () => renderer?.playMotion(character.tapMotion));
   expressionButton.addEventListener('click', () => renderer?.cycleExpression());
@@ -372,11 +358,30 @@ const camera = new FaceTracker({
   },
 });
 
-cameraToggle.addEventListener('click', () => {
-  if (camera.isEnabled) camera.stop();
-  else if (ready && !isRuntimePaused()) void camera.start();
+const inputModes = new ExclusiveInputModes({
+  motionEnabled: () => motionEnabled,
+  setMotionEnabled,
+  cameraEnabled: () => camera.isEnabled,
+  startCamera: () => camera.start(),
+  stopCamera: () => camera.stop(),
+  canStartCamera: () => ready,
+  paused: isRuntimePaused,
+  requestMotionPermission,
+  onMotionPermission: (permission) => {
+    if (permission === 'granted') {
+      showNotice('지금 기기를 든 자세가 기준이 돼요. 기울이거나 흔들어 보세요.');
+    } else if (permission === 'denied') {
+      showNotice('동작 및 방향 접근이 거부됐어요. 브라우저 설정에서 허용해 주세요.');
+    } else if (permission === 'insecure') {
+      showNotice('기울이기는 https 주소에서만 쓸 수 있어요.');
+    } else {
+      showNotice('이 기기에서는 기울이기를 지원하지 않아요.');
+    }
+  },
 });
+cameraToggle.addEventListener('click', () => inputModes.toggleCamera());
 window.addEventListener('pagehide', () => {
+  inputModes.cancelPendingMotion();
   cancelPointerGesture();
   camera.stop();
   setMotionEnabled(false);
