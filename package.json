@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Pocket Live2D: interactive character web pages with tilt, shake, touch and face tracking.",
+  "description": "Pocket Live2D: interactive character web pages (Vue 3) with tilt, shake, touch and face tracking.",
   "scripts": {
     "stage": "node tool/stage-public.mjs",
     "dev": "npm run stage && vite --host",
@@ -19,22 +19,25 @@
     "upload:models": "node tool/upload-r2.mjs",
     "verify:models": "node tool/verify-r2.mjs",
     "model:prepare": "python3 tool/prepare_model_upload.py",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:sdk": "tsc --noEmit -p tsconfig.sdk.json",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "typecheck:sdk": "vue-tsc --noEmit -p tsconfig.sdk.json",
     "test": "vitest run",
     "validate:models": "python3 tool/validate_model_assets.py"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-vue": "^6.0.9",
     "typescript": "~5.9.3",
     "vite": "^8.3.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "vue-tsc": "^3.3.12"
   },
   "engines": {
     "node": ">=20.19"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "1.1.0"
+    "@mediapipe/tasks-vision": "1.1.0",
+    "vue": "^3.5.43"
   }
 }

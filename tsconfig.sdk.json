@@ -13,6 +13,6 @@
       "@framework/*": ["vendor/cubism/Framework/src/*"]
     }
   },
-  "include": ["src", "vendor/cubism/Core/live2dcubismcore.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.vue", "vendor/cubism/Core/live2dcubismcore.d.ts"],
   "exclude": []
 }

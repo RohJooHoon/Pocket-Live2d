@@ -51,10 +51,10 @@ SDK가 없으면 같은 명령이 "Live2D SDK가 연결되지 않은 빌드예�
 
 ```text
 index.html  ── <script> cubism/live2dcubismcore.min.js   (SDK가 있을 때만 들어감)
-   └─ main.ts ── @cubism-adapter
-                  ├─ SDK 없음 → live2d/unavailable.ts     (안내 문구)
-                  └─ SDK 있음 → live2d/cubism/adapter.ts
-                                 └─ Core 확인 후 cubismRenderer.ts를 별도 파일로 불러옴
+   └─ main.ts → App.vue → composables/useCharacterStage.ts ── @cubism-adapter
+                                                              ├─ SDK 없음 → live2d/unavailable.ts     (안내 문구)
+                                                              └─ SDK 있음 → live2d/cubism/adapter.ts
+                                                                             └─ Core 확인 후 cubismRenderer.ts를 별도 파일로 불러옴
 ```
 
 - Cubism Framework는 불러오는 순간 Core를 참조합니다. 그래서 Core가 실제로 로드된 것을 확인한 뒤에만 Framework를 불러옵니다.

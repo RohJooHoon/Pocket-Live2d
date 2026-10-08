@@ -19,6 +19,6 @@
       "@cubism-adapter": ["src/live2d/unavailable.ts"]
     }
   },
-  "include": ["src", "test", "vite.config.ts"],
+  "include": ["src/**/*.ts", "src/**/*.vue", "test", "vite.config.ts"],
   "exclude": ["src/live2d/cubism"]
 }

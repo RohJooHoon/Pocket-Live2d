@@ -22,41 +22,36 @@ export function parseLegalMarkdown(source: string): LegalBlock[] {
   return blocks;
 }
 
-/** Renders parsed blocks with text nodes only, so document text is never parsed as HTML. */
-export function renderLegalBlocks(blocks: LegalBlock[], doc: Document = document): DocumentFragment {
-  const fragment = doc.createDocumentFragment();
-  let list: HTMLUListElement | null = null;
-  let subList: HTMLUListElement | null = null;
+export interface LegalListItem {
+  text: string;
+  children: string[];
+}
+
+export type LegalNode =
+  | { type: 'heading1' | 'heading2' | 'paragraph'; text: string }
+  | { type: 'list'; items: LegalListItem[] };
+
+/**
+ * Groups consecutive bullets into lists, with sub-bullets nested under the
+ * preceding bullet. A sub-bullet without a parent becomes a top-level item.
+ */
+export function groupLegalBlocks(blocks: readonly LegalBlock[]): LegalNode[] {
+  const nodes: LegalNode[] = [];
+  let list: LegalListItem[] | null = null;
 
   for (const block of blocks) {
     if (block.type === 'bullet' || block.type === 'subBullet') {
       if (!list) {
-        list = doc.createElement('ul');
-        fragment.append(list);
+        list = [];
+        nodes.push({ type: 'list', items: list });
       }
-      const item = doc.createElement('li');
-      item.textContent = block.text;
-      const parentItem = list.lastElementChild;
-      if (block.type === 'bullet' || !parentItem) {
-        list.append(item);
-        subList = null;
-      } else {
-        if (!subList) {
-          subList = doc.createElement('ul');
-          parentItem.append(subList);
-        }
-        subList.append(item);
-      }
+      const parent = list.at(-1);
+      if (block.type === 'subBullet' && parent) parent.children.push(block.text);
+      else list.push({ text: block.text, children: [] });
       continue;
     }
-
     list = null;
-    subList = null;
-    const element = doc.createElement(
-      block.type === 'heading1' ? 'h2' : block.type === 'heading2' ? 'h3' : 'p',
-    );
-    element.textContent = block.text;
-    fragment.append(element);
+    nodes.push({ type: block.type, text: block.text });
   }
-  return fragment;
+  return nodes;
 }

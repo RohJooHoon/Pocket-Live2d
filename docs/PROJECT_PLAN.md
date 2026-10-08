@@ -17,7 +17,7 @@ SDK를 넣은 실제 표시와 기기 검증은 따로 체크합니다.
 
 ## 1. 웹 기반
 
-- [x] TypeScript + Vite 프로젝트, 캐릭터별 빌드 (`CHARACTER=<id>`)
+- [x] Vue 3 + TypeScript + Vite 프로젝트, 캐릭터별 빌드 (`CHARACTER=<id>`)
 - [x] SDK 없는 빌드에서도 동작하는 페이지와 안내 문구
 - [x] Core 확인 뒤 Framework를 별도 파일로 불러오기 (Core가 없어도 페이지가 멈추지 않음)
 - [x] Cubism SDK for Web 준비 스크립트, SDK 파일 git 제외

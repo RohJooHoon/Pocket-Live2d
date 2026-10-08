@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import vue from '@vitejs/plugin-vue';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { readSiteConfig } from './tool/site-config.mjs';
 
@@ -35,7 +36,7 @@ export default defineConfig(({ mode }) => {
     publicDir: resolve(root, '.public', characterId),
     // Phones only allow motion sensors on secure pages, so `npm run dev:https`
     // serves a self-signed https address for testing over Wi-Fi.
-    plugins: [cubismCoreScript(), ...(mode === 'https' ? [basicSsl()] : [])],
+    plugins: [vue(), cubismCoreScript(), ...(mode === 'https' ? [basicSsl()] : [])],
     resolve: {
       alias: {
         '@cubism-adapter': resolve(

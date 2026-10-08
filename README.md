@@ -145,7 +145,7 @@ $env:CHARACTER="mark"; npm run build    # Windows PowerShell
 |---|---|
 | `npm run dev` / `npm run dev:https` | 개발 서버 (http / 휴대폰 테스트용 https) |
 | `npm test` | 단위 테스트 (기울기 필터, 흔들기, 탭, 약관, 캐릭터 설정) |
-| `npm run typecheck` | 타입 검사 (SDK 없이 가능) |
+| `npm run typecheck` | 타입 검사, `.vue` 포함 (SDK 없이 가능) |
 | `npm run typecheck:sdk` | SDK 렌더러까지 타입 검사 (SDK를 준비한 뒤) |
 | `npm run build` | 캐릭터 사이트 빌드 (`CHARACTER`로 캐릭터 선택, 기본 mark) |
 | `npm run validate:models` | 모델 파일 참조와 파일 형식 검사 |
@@ -155,10 +155,13 @@ $env:CHARACTER="mark"; npm run build    # Windows PowerShell
 
 ```text
 src/
-├── main.ts                 화면 연결 (동의, 버튼, 터치, 기울이기)
+├── main.ts                 Vue 앱 시작
+├── App.vue                 화면 구성 (동의, 정보, 문서, 세로 화면 안내)
+├── components/             화면 조각 (상단 바, 조작 버튼, 얼굴 포인트, 대화상자)
+├── composables/            화면 상태 (캐릭터·입력 제어, 상태 문구, 가로 화면 감지)
 ├── config.ts               서비스 이름, 약관 동의 버전
-├── input/                  기울기 보정·필터, 흔들기, 탭 판정, 센서 권한
-├── legal/                  약관 동의 저장, 약관 문서 표시
+├── input/                  기울기 보정·필터, 흔들기, 탭 판정, 센서 권한, 얼굴 추적
+├── legal/                  약관 동의 저장, 약관 문서 해석
 └── live2d/
     ├── renderer.ts         페이지가 쓰는 렌더러 인터페이스
     ├── unavailable.ts      SDK 없는 빌드용 (안내 문구만 표시)
@@ -167,6 +170,8 @@ legal/                      이용약관, 개인정보처리방침 (페이지가
 characters/<id>/            캐릭터 설정과 모델
 tool/                       SDK 준비, 정적 파일 준비, 모델 검사
 ```
+
+화면은 Vue 3(Composition API, `<script setup>`)로 만들었습니다. `input/`, `live2d/`, `legal/`의 기능 코드는 Vue에 의존하지 않는 TypeScript라 단위 테스트를 그대로 씁니다. 렌더러·센서·카메라 같은 객체는 반응형으로 감싸지 않고, 화면에 보이는 값만 Vue 상태로 둡니다.
 
 SDK가 없을 때도 페이지가 멈추지 않도록, Cubism Framework는 Core가 로드된 것을 확인한 뒤에만 별도 파일로 불러옵니다.
 
