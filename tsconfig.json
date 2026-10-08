@@ -14,9 +14,8 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
     "useDefineForClassFields": false,
-    "baseUrl": ".",
     "paths": {
-      "@cubism-adapter": ["src/live2d/unavailable.ts"]
+      "@cubism-adapter": ["./src/live2d/unavailable.ts"]
     }
   },
   "include": ["src", "test", "vite.config.ts"],
