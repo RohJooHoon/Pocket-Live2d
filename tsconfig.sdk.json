@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "noImplicitAny": true,
+    "useUnknownInCatchVariables": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "isolatedModules": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@cubism-adapter": ["src/live2d/cubism/adapter.ts"],
+      "@framework/*": ["vendor/cubism/Framework/src/*"]
+    }
+  },
+  "include": ["src", "vendor/cubism/Core/live2dcubismcore.d.ts"],
+  "exclude": []
+}

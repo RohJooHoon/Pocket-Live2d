@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent / "assets/live2d"
-models = list(root.glob("*/*.model3.json"))
+root = Path(__file__).resolve().parent.parent / "characters"
+models = list(root.glob("*/model/*.model3.json"))
 if not models:
     raise SystemExit("No test Live2D model is bundled.")
 for model in models:
