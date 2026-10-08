@@ -25,8 +25,10 @@ export interface CharacterRenderer {
   lookAt(x: number, y: number): void;
   /** Lets the gaze return to the motion's own direction. */
   releaseLook(): void;
-  /** Hit-tests a position in canvas CSS pixels and plays the tap motion when it hits. */
+  /** Hit-tests canvas CSS pixels: face cycles expressions, body plays a reaction. */
   tap(x: number, y: number): boolean;
+  /** Enable idle motions and body sway; off keeps breathing and explicit input. */
+  setAutomaticMotionEnabled(enabled: boolean): void;
   /** Adds tilt offsets on top of motions every frame; null removes them. */
   setTiltOffsets(offsets: ParameterOffsets | null): void;
   /** Absolute camera pose and expression values; null restores normal animation. */

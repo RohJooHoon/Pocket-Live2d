@@ -91,13 +91,19 @@ export class CubismCharacterRenderer implements CharacterRenderer {
     const model = this.model;
     if (!model?.isReady) return false;
     const point = this.toModelSpace(x, y);
-    if (!model.hitTest(point.x, point.y)) return false;
-    model.playTapMotion();
+    const target = model.hitTest(point.x, point.y);
+    if (target == null) return false;
+    if (target === 'face') model.cycleExpression();
+    else model.playTapMotion();
     return true;
   }
 
   setTiltOffsets(offsets: ParameterOffsets | null): void {
     this.model?.setTiltOffsets(offsets);
+  }
+
+  setAutomaticMotionEnabled(enabled: boolean): void {
+    this.model?.setAutomaticMotionEnabled(enabled);
   }
 
   setFaceParameters(parameters: FaceParameters | null): void {

@@ -9,4 +9,4 @@ This content uses sample data owned and copyrighted by Live2D Inc. The sample da
 - Mark-kun must retain his cartoon character nature.
 
 Original moc3, texture, physics, display information, user data, and six motions are preserved. The model manifest adds TapBody/Shake aliases and two parameter-only expression fixtures authored for this app. No sound data is included.
-The upstream model defines no HitAreas; drawable-based hit testing requires a model that supplies them. Mark supports a whole-model tap fallback.
+The upstream model defines no HitAreas. The app uses visible drawable bounds and their parent parts to distinguish face taps (expression) from body taps (reaction). Bounds are rectangles, so taps near a part may also hit it.

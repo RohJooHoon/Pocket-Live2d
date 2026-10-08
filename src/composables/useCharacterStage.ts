@@ -33,18 +33,21 @@ const MOTION_PERMISSION_NOTICES: Record<MotionPermission, string> = {
 };
 
 /**
- * Owns the Live2D renderer and every input that drives it: touch, tilt and
+ * Owns the Live2D renderer and every input that drives it: taps, tilt and
  * shake, camera face tracking and the hidden-UI long press. Renderer, sensors
  * and trackers stay plain objects; only what the template shows is reactive.
  */
 export function useCharacterStage(elements: CharacterStageElements, { landscape, status }: CharacterStageOptions) {
   const character = shallowRef<CharacterConfig | null>(null);
   const ready = ref(false);
+  const automaticMotionEnabled = ref(false);
   const motionEnabled = ref(false);
   const cameraEnabled = ref(false);
   const cameraState = ref<CameraStatus['state']>('stopped');
   const faceFound = ref(false);
   const uiHidden = ref(false);
+  const restoreHintVisible = ref(false);
+  let restoreHintTimer: ReturnType<typeof setTimeout> | undefined;
 
   let renderer: CharacterRenderer | null = null;
   let camera: FaceTracker | null = null;
@@ -92,29 +95,21 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
         if (rendererStatus.state === 'error' && camera?.isEnabled) camera.stop();
       },
     });
+    renderer.setAutomaticMotionEnabled(automaticMotionEnabled.value);
     syncRuntimeState();
   }
 
-  function playReaction(): void {
-    if (ready.value && character.value) renderer?.playMotion(character.value.tapMotion);
+  function toggleAutomaticMotion(): void {
+    automaticMotionEnabled.value = !automaticMotionEnabled.value;
+    renderer?.setAutomaticMotionEnabled(automaticMotionEnabled.value);
   }
 
-  function cycleExpression(): void {
-    if (ready.value) renderer?.cycleExpression();
-  }
-
-  // --- Touch and hidden UI ----------------------------------------------------
+  // --- Hidden UI --------------------------------------------------------------
 
   const taps = new TapTracker();
   const restoreHold = new HoldToRestore(() => {
-    cancelPointerGesture();
     setUiHidden(false);
   });
-
-  function canvasPoint(event: PointerEvent): { x: number; y: number } {
-    const rect = (event.currentTarget as HTMLCanvasElement).getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-  }
 
   function cancelPointerGesture(): void {
     restoreHold.cancelAll();
@@ -124,12 +119,16 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
       const canvas = elements.canvas.value;
       if (canvas?.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
     }
-    renderer?.releaseLook();
   }
 
   function setUiHidden(hidden: boolean): void {
-    restoreHold.cancelAll();
+    cancelPointerGesture();
+    clearTimeout(restoreHintTimer);
     uiHidden.value = hidden;
+    restoreHintVisible.value = hidden;
+    if (hidden) {
+      restoreHintTimer = setTimeout(() => { restoreHintVisible.value = false; }, 4000);
+    }
     // Do not leave keyboard focus on a control which has become invisible.
     if (hidden && document.activeElement instanceof HTMLElement) document.activeElement.blur();
   }
@@ -137,38 +136,35 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
   function onPointerDown(event: PointerEvent): void {
     if (!started || isRuntimePaused()) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    if (uiHidden.value) {
-      event.preventDefault();
-      if (event.isPrimary) restoreHold.down(event.pointerId, event.clientX, event.clientY);
-      else restoreHold.cancelAll();
+    event.preventDefault();
+    if (!event.isPrimary || taps.activePointerId != null) {
+      cancelPointerGesture();
+      return;
     }
-    if (!taps.down(event.pointerId, event.clientX, event.clientY, event.timeStamp)) return;
+    taps.down(event.pointerId, event.clientX, event.clientY, event.timeStamp);
+    if (uiHidden.value) restoreHold.down(event.pointerId, event.clientX, event.clientY);
     (event.currentTarget as HTMLCanvasElement).setPointerCapture(event.pointerId);
-    const point = canvasPoint(event);
-    renderer?.lookAt(point.x, point.y);
   }
 
   function onPointerMove(event: PointerEvent): void {
     restoreHold.move(event.pointerId, event.clientX, event.clientY);
-    if (!taps.move(event.pointerId, event.clientX, event.clientY)) return;
-    const point = canvasPoint(event);
-    renderer?.lookAt(point.x, point.y);
+    taps.move(event.pointerId, event.clientX, event.clientY);
   }
 
   function onPointerUp(event: PointerEvent): void {
     restoreHold.cancel(event.pointerId);
     const result = taps.up(event.pointerId, event.timeStamp);
     if (!result.tracked) return;
-    renderer?.releaseLook();
+    const canvas = elements.canvas.value;
+    if (canvas?.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     if (result.tap && ready.value) {
-      const point = canvasPoint(event);
-      renderer?.tap(point.x, point.y);
+      const rect = (event.currentTarget as HTMLCanvasElement).getBoundingClientRect();
+      renderer?.tap(event.clientX - rect.left, event.clientY - rect.top);
     }
   }
 
   function onPointerCancel(event: PointerEvent): void {
-    restoreHold.cancel(event.pointerId);
-    if (taps.cancel(event.pointerId)) renderer?.releaseLook();
+    if (taps.activePointerId === event.pointerId) cancelPointerGesture();
   }
 
   function onContextMenu(event: Event): void {
@@ -308,7 +304,8 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
     window.removeEventListener('pagehide', onPageHide);
     window.removeEventListener('pageshow', syncRuntimeState);
     document.removeEventListener('visibilitychange', syncRuntimeState);
-    restoreHold.cancelAll();
+    cancelPointerGesture();
+    clearTimeout(restoreHintTimer);
     cancelAnimationFrame(tiltFrame);
     sensors.stop();
     camera?.stop();
@@ -319,6 +316,7 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
   return {
     character: readonly(character),
     ready: readonly(ready),
+    automaticMotionEnabled: readonly(automaticMotionEnabled),
     motionEnabled: readonly(motionEnabled),
     camera: {
       enabled: readonly(cameraEnabled),
@@ -327,12 +325,12 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
       canToggle: computed(() => ready.value || cameraEnabled.value),
     },
     uiHidden: readonly(uiHidden),
+    restoreHintVisible: readonly(restoreHintVisible),
     start,
     setUiHidden,
+    toggleAutomaticMotion,
     toggleMotion,
     toggleCamera,
-    playReaction,
-    cycleExpression,
     pointer: {
       onPointerDown,
       onPointerMove,

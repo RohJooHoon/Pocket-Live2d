@@ -11,6 +11,7 @@ export class DeferredRenderer implements CharacterRenderer {
   private pendingTilt: ParameterOffsets | null = null;
   private pendingFace: FaceParameters | null = null;
   private paused = false;
+  private automaticMotionEnabled = false;
   private disposed = false;
 
   attach(target: CharacterRenderer): void {
@@ -19,6 +20,7 @@ export class DeferredRenderer implements CharacterRenderer {
       return;
     }
     this.target = target;
+    target.setAutomaticMotionEnabled(this.automaticMotionEnabled);
     target.setTiltOffsets(this.pendingTilt);
     target.setFaceParameters(this.pendingFace);
     if (this.paused) target.setPaused(true);
@@ -34,6 +36,11 @@ export class DeferredRenderer implements CharacterRenderer {
 
   tap(x: number, y: number): boolean {
     return this.target?.tap(x, y) ?? false;
+  }
+
+  setAutomaticMotionEnabled(enabled: boolean): void {
+    this.automaticMotionEnabled = enabled;
+    this.target?.setAutomaticMotionEnabled(enabled);
   }
 
   setTiltOffsets(offsets: ParameterOffsets | null): void {

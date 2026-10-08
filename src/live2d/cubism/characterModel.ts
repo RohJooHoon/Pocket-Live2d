@@ -21,6 +21,7 @@ import { CubismPoseUpdater } from '@framework/motion/cubismposeupdater';
 import { CubismUpdateScheduler } from '@framework/motion/cubismupdatescheduler';
 
 import type { FaceParameters, ParameterOffsets } from '../../types';
+import { selectTapTarget, type TapTarget } from '../tapTarget';
 
 const PRIORITY_NONE = 0;
 const PRIORITY_IDLE = 1;
@@ -53,6 +54,8 @@ export class CharacterModel extends CubismUserModel {
   private lipSyncIds: CubismIdHandle[] = [];
   private motionUpdated = false;
   private ready = false;
+  private automaticMotionEnabled = false;
+  private neutralParameters: number[] = [];
   private looking = false;
   private tiltOffsets: ParameterOffsets | null = null;
   private faceParameters: FaceParameters | null = null;
@@ -116,7 +119,9 @@ export class CharacterModel extends CubismUserModel {
     setting.getLayoutMap(layout);
     this._modelMatrix.setupFromLayout(layout);
 
-    this.getModel().saveParameters();
+    const model = this.getModel();
+    this.neutralParameters = Array.from({ length: model.getParameterCount() }, (_, i) => model.getParameterValueByIndex(i));
+    model.saveParameters();
     await this.loadMotions(setting);
     this._motionManager.stopAllMotions();
 
@@ -134,9 +139,13 @@ export class CharacterModel extends CubismUserModel {
     const model = this.getModel();
 
     model.loadParameters();
+    if (!this.automaticMotionEnabled) {
+      // Return to the initial pose after reactions and when idle motion is switched off.
+      this.neutralParameters.forEach((value, i) => model.setParameterValueByIndex(i, value));
+    }
     this.motionUpdated = false;
     if (this._motionManager.isFinished()) {
-      this.startRandomMotion(this.options.idleMotion, PRIORITY_IDLE);
+      if (this.automaticMotionEnabled) this.startRandomMotion(this.options.idleMotion, PRIORITY_IDLE);
     } else {
       this.motionUpdated = this._motionManager.updateMotion(model, deltaSeconds);
     }
@@ -198,6 +207,13 @@ export class CharacterModel extends CubismUserModel {
     this.tiltOffsets = offsets;
   }
 
+  setAutomaticMotionEnabled(enabled: boolean): void {
+    if (this.automaticMotionEnabled === enabled) return;
+    this.automaticMotionEnabled = enabled;
+    if (!enabled) this._motionManager.stopAllMotions();
+    if (this._breath) this.configureBreathing();
+  }
+
   setFaceParameters(parameters: FaceParameters | null): void {
     this.faceParameters = parameters;
   }
@@ -213,15 +229,20 @@ export class CharacterModel extends CubismUserModel {
     this.setDragging(0, 0);
   }
 
-  /** Hit-tests a point in model space; uses HitAreas when the model defines them. */
-  hitTest(x: number, y: number): boolean {
-    if (!this.ready || !this.setting) return false;
+  /** Model-space HitAreas, or visible drawable parts for models such as Mark. */
+  hitTest(x: number, y: number): TapTarget | null {
+    if (!this.ready || !this.setting) return null;
+    return selectTapTarget(this.hitNames(x, y));
+  }
+
+  private *hitNames(x: number, y: number): Generator<string> {
+    if (!this.setting) return;
     const hitAreaCount = this.setting.getHitAreasCount();
     if (hitAreaCount > 0) {
       for (let i = 0; i < hitAreaCount; i += 1) {
-        if (this.isHit(this.setting.getHitAreaId(i), x, y)) return true;
+        if (this.isHit(this.setting.getHitAreaId(i), x, y)) yield this.setting.getHitAreaName(i);
       }
-      return false;
+      return;
     }
 
     // Models without HitAreas (such as Mark) fall back to visible drawable bounds.
@@ -232,10 +253,11 @@ export class CharacterModel extends CubismUserModel {
         model.getDrawableOpacity(i) > 0 &&
         this.isHit(model.getDrawableId(i), x, y)
       ) {
-        return true;
+        const partIndex = model.getDrawableParentPartIndex(i);
+        const partName = partIndex >= 0 ? model.getPartId(partIndex).getString() : '';
+        yield `${partName} ${model.getDrawableId(i).getString()}`;
       }
     }
-    return false;
   }
 
   playTapMotion(): void {
@@ -331,13 +353,7 @@ export class CharacterModel extends CubismUserModel {
     }
 
     this._breath = CubismBreath.create();
-    this._breath.setParameters([
-      new BreathParameterData(this.ids.angleX, 0.0, 15.0, 6.5345, 0.5),
-      new BreathParameterData(this.ids.angleY, 0.0, 8.0, 3.5345, 0.5),
-      new BreathParameterData(this.ids.angleZ, 0.0, 10.0, 5.5345, 0.5),
-      new BreathParameterData(this.ids.bodyAngleX, 0.0, 4.0, 15.5345, 0.5),
-      new BreathParameterData(this.ids.breath, 0.5, 0.5, 3.2345, 1),
-    ]);
+    this.configureBreathing();
     this.scheduler.addUpdatableList(new CubismBreathUpdater(this._breath));
 
     this.eyeBlinkIds = Array.from({ length: setting.getEyeBlinkParameterCount() }, (_, i) =>
@@ -357,6 +373,19 @@ export class CharacterModel extends CubismUserModel {
       new LookParameterData(this.ids.eyeBallY, 0.0, 1.0, 0.0),
     ]);
     this.scheduler.addUpdatableList(new CubismLookUpdater(this.look, this._dragManager));
+  }
+
+  private configureBreathing(): void {
+    const sway = this.automaticMotionEnabled ? [
+      new BreathParameterData(this.ids.angleX, 0.0, 15.0, 6.5345, 0.5),
+      new BreathParameterData(this.ids.angleY, 0.0, 8.0, 3.5345, 0.5),
+      new BreathParameterData(this.ids.angleZ, 0.0, 10.0, 5.5345, 0.5),
+      new BreathParameterData(this.ids.bodyAngleX, 0.0, 4.0, 15.5345, 0.5),
+    ] : [];
+    this._breath.setParameters([
+      ...sway,
+      new BreathParameterData(this.ids.breath, 0.5, 0.5, 3.2345, 1),
+    ]);
   }
 
   private async loadMotions(setting: ICubismModelSetting): Promise<void> {

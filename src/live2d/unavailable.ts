@@ -10,6 +10,7 @@ export const createRenderer: CreateRenderer = (options) => {
     lookAt: () => {},
     releaseLook: () => {},
     tap: () => false,
+    setAutomaticMotionEnabled: () => {},
     setTiltOffsets: () => {},
     setFaceParameters: () => {},
     playMotion: () => {},

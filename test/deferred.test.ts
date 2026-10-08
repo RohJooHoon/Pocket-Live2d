@@ -7,6 +7,7 @@ function fakeRenderer(): CharacterRenderer {
     lookAt: vi.fn(),
     releaseLook: vi.fn(),
     tap: vi.fn(() => true),
+    setAutomaticMotionEnabled: vi.fn(),
     setTiltOffsets: vi.fn(),
     setFaceParameters: vi.fn(),
     playMotion: vi.fn(),
@@ -37,6 +38,7 @@ describe('DeferredRenderer', () => {
 
     const target = fakeRenderer();
     deferred.attach(target);
+    expect(target.setAutomaticMotionEnabled).toHaveBeenCalledWith(false);
     expect(target.setTiltOffsets).toHaveBeenCalledWith(tilt);
     expect(target.setPaused).toHaveBeenCalledWith(true);
 
@@ -66,5 +68,16 @@ describe('DeferredRenderer', () => {
     expect(target.setFaceParameters).toHaveBeenCalledWith(null);
     deferred.setFaceParameters(face);
     expect(target.setFaceParameters).toHaveBeenLastCalledWith(face);
+  });
+
+  it('retains the latest automatic motion selection during lazy loading', () => {
+    const deferred = new DeferredRenderer();
+    deferred.setAutomaticMotionEnabled(true);
+    deferred.setAutomaticMotionEnabled(false);
+    const target = fakeRenderer();
+    deferred.attach(target);
+    expect(target.setAutomaticMotionEnabled).toHaveBeenLastCalledWith(false);
+    deferred.setAutomaticMotionEnabled(true);
+    expect(target.setAutomaticMotionEnabled).toHaveBeenLastCalledWith(true);
   });
 });

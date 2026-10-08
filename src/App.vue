@@ -10,11 +10,13 @@ import TopBar from './components/TopBar.vue';
 import { useCharacterStage } from './composables/useCharacterStage';
 import { useMobileLandscape } from './composables/useMobileLandscape';
 import { useStatusLine } from './composables/useStatusLine';
+import { useZoomGuard } from './composables/useZoomGuard';
 import { SERVICE_NAME } from './config';
 import { browserStore, hasAcceptedCurrentTerms, recordAcceptance } from './legal/consent';
 import type { LegalDocumentKey } from './legal/documents';
 
 document.title = SERVICE_NAME;
+useZoomGuard();
 
 const canvas = useTemplateRef<HTMLCanvasElement>('character-canvas');
 const video = useTemplateRef<HTMLVideoElement>('camera-video');
@@ -26,7 +28,7 @@ const stage = useCharacterStage(
   { canvas, video, facePoints: () => facePreview.value?.canvas ?? null },
   { landscape, status },
 );
-const { character, ready, motionEnabled, uiHidden, pointer } = stage;
+const { character, automaticMotionEnabled, motionEnabled, uiHidden, restoreHintVisible, pointer } = stage;
 const { enabled: cameraEnabled, state: cameraState, faceFound, canToggle: cameraCanToggle } = stage.camera;
 const statusMessage = status.message;
 
@@ -73,6 +75,12 @@ onMounted(() => {
       @contextmenu="pointer.onContextMenu"
     />
 
+    <Transition name="restore-hint">
+      <p v-if="restoreHintVisible" class="restore-hint" role="status">
+        화면을 10초 동안 누르고 있으면 UI 숨기기가 해제됩니다.
+      </p>
+    </Transition>
+
     <TopBar :character-name="character?.name ?? '캐릭터'" @hide-ui="stage.setUiHidden(true)" @open-info="infoOpen = true" />
 
     <video id="camera-video" ref="camera-video" autoplay muted playsinline hidden aria-hidden="true" />
@@ -80,15 +88,14 @@ onMounted(() => {
 
     <ControlBar
       :status="statusMessage"
-      :ready="ready"
+      :automatic-motion-enabled="automaticMotionEnabled"
       :motion-enabled="motionEnabled"
       :camera-enabled="cameraEnabled"
       :camera-state="cameraState"
       :camera-toggle-enabled="cameraCanToggle"
+      @toggle-automatic-motion="stage.toggleAutomaticMotion"
       @toggle-motion="stage.toggleMotion"
       @toggle-camera="stage.toggleCamera"
-      @react="stage.playReaction"
-      @expression="stage.cycleExpression"
     />
   </main>
 
