@@ -32,3 +32,13 @@ export interface ParameterOffsets {
   eyeBallY: number;
   bodyAngleX: number;
 }
+
+/** Absolute values supplied by the camera, separate from additive tilt input. */
+export interface FaceParameters extends ParameterOffsets {
+  eyeLOpen: number;
+  eyeROpen: number;
+  mouthOpen: number;
+  mouthForm: number;
+  browLY: number;
+  browRY: number;
+}

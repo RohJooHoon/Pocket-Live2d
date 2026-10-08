@@ -4,6 +4,7 @@ import { createRenderer } from '@cubism-adapter';
 import privacyPolicy from '../legal/privacy_policy.md?raw';
 import termsOfService from '../legal/terms_of_service.md?raw';
 import { SERVICE_NAME } from './config';
+import { FaceTracker } from './input/faceTracker';
 import { MotionSensors, requestMotionPermission } from './input/motionSensors';
 import { TapTracker } from './input/tap';
 import { NEUTRAL_ORIENTATION, OrientationFilter, tiltToParameters } from './input/tilt';
@@ -35,11 +36,15 @@ const consentDialog = element<HTMLDialogElement>('consent-dialog');
 const infoDialog = element<HTMLDialogElement>('info-dialog');
 const documentDialog = element<HTMLDialogElement>('document-dialog');
 const portraitDialog = element<HTMLDialogElement>('portrait-dialog');
+const cameraToggle = element<HTMLButtonElement>('camera-toggle');
+const cameraPreview = element('camera-preview');
+const cameraStatus = element('camera-status');
 const mobileLandscape = window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: landscape)');
 
 document.title = `${character.name} · ${SERVICE_NAME}`;
+element('service-name').textContent = SERVICE_NAME;
 element('character-name').textContent = character.name;
-element('consent-title').textContent = `${SERVICE_NAME}를 시작하기 전에`;
+element('consent-title').textContent = `${SERVICE_NAME} 시작하기`;
 element('info-title').textContent = SERVICE_NAME;
 element('info-credit').textContent = character.credit ?? '';
 
@@ -111,8 +116,10 @@ function startCharacter(): void {
       ready = status.state === 'ready';
       reactButton.disabled = !ready;
       expressionButton.disabled = !ready;
+      cameraToggle.disabled = !ready && !camera.isEnabled;
       rendererMessage = describeStatus(status);
       showStatus();
+      if (status.state === 'error' && camera.isEnabled) camera.stop();
     },
   });
   wirePointer();
@@ -185,7 +192,8 @@ function tiltLoop(time: number): void {
 function setMotionEnabled(enabled: boolean): void {
   motionEnabled = enabled;
   motionToggle.setAttribute('aria-pressed', String(enabled));
-  motionToggle.textContent = enabled ? '기울이기·흔들기 끄기' : '기울이기·흔들기 켜기';
+  motionToggle.setAttribute('aria-label', enabled ? '기울이기·흔들기 끄기' : '기울이기·흔들기 켜기');
+  element('motion-label').textContent = enabled ? '기울이기 끄기' : '기울이기 켜기';
   syncRuntimeState();
 }
 
@@ -196,6 +204,10 @@ function isRuntimePaused(): boolean {
 function syncRuntimeState(): void {
   const paused = isRuntimePaused();
   renderer?.setPaused(paused);
+  if (paused && camera.isEnabled) {
+    camera.stop();
+    return;
+  }
   cancelAnimationFrame(tiltFrame);
   if (paused) {
     const pointerId = taps.activePointerId;
@@ -205,7 +217,7 @@ function syncRuntimeState(): void {
     }
     renderer?.releaseLook();
   }
-  if (motionEnabled && !paused) {
+  if (motionEnabled && !paused && !camera.isEnabled) {
     tiltTarget = { ...NEUTRAL_ORIENTATION };
     tiltFilter.reset();
     sensors.start();
@@ -264,6 +276,43 @@ function tryPortraitLock(): void {
   // Unsupported and fullscreen-only browsers use the portrait gate instead.
   if (typeof orientation?.lock === 'function') void orientation.lock('portrait').catch(() => {});
 }
+
+// --- Camera -----------------------------------------------------------------
+
+let cameraWasEnabled = false;
+const camera = new FaceTracker({
+  video: element<HTMLVideoElement>('camera-video'),
+  onParameters: (parameters) => renderer?.setFaceParameters(parameters),
+  onStatus: (status) => {
+    const enabled = camera.isEnabled;
+    cameraToggle.setAttribute('aria-pressed', String(enabled));
+    cameraToggle.setAttribute('aria-label', status.state === 'starting' ? '카메라 준비 취소' :
+      enabled ? '얼굴 따라하기 끄기' : '얼굴 따라하기 켜기');
+    element('camera-label').textContent = status.state === 'starting' ? '준비 취소' :
+      enabled ? '따라하기 끄기' : '따라하기 켜기';
+    cameraToggle.disabled = !ready && !enabled;
+    cameraPreview.hidden = !enabled;
+    cameraStatus.textContent = status.state === 'starting' ? '카메라 준비 중…' :
+      status.state === 'running' && status.faceFound ? '따라하는 중 · 기기 내 처리' : '얼굴을 보여 주세요';
+    if (status.state === 'error') showNotice(status.message);
+    // Inference reports status every frame. Only mode changes affect playback.
+    if (cameraWasEnabled !== enabled) {
+      cameraWasEnabled = enabled;
+      syncRuntimeState();
+    }
+  },
+});
+
+cameraToggle.addEventListener('click', () => {
+  if (camera.isEnabled) camera.stop();
+  else if (ready && !isRuntimePaused()) void camera.start();
+});
+window.addEventListener('pagehide', () => {
+  camera.stop();
+  setMotionEnabled(false);
+  renderer?.setPaused(true);
+});
+window.addEventListener('pageshow', syncRuntimeState);
 
 // --- Consent gate -----------------------------------------------------------
 

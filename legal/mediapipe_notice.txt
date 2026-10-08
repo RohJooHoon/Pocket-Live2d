@@ -1,0 +1,13 @@
+MediaPipe Tasks Vision 1.1.0
+Copyright Google LLC
+Package code licensed under the Apache License, Version 2.0 (see LICENSE.txt).
+Source: https://github.com/google-ai-edge/mediapipe
+Package: https://www.npmjs.com/package/@mediapipe/tasks-vision
+
+Face Landmarker model bundle (float16, version 1)
+Official download: https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+SHA-256: 64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff
+Model documentation and model cards: https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker
+Privacy notice: https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice
+
+These notices apply to MediaPipe; they do not relicense Live2D Cubism SDK or character assets.

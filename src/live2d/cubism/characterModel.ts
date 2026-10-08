@@ -20,7 +20,7 @@ import { CubismPhysicsUpdater } from '@framework/motion/cubismphysicsupdater';
 import { CubismPoseUpdater } from '@framework/motion/cubismposeupdater';
 import { CubismUpdateScheduler } from '@framework/motion/cubismupdatescheduler';
 
-import type { ParameterOffsets } from '../../types';
+import type { FaceParameters, ParameterOffsets } from '../../types';
 
 const PRIORITY_NONE = 0;
 const PRIORITY_IDLE = 1;
@@ -55,6 +55,7 @@ export class CharacterModel extends CubismUserModel {
   private ready = false;
   private looking = false;
   private tiltOffsets: ParameterOffsets | null = null;
+  private faceParameters: FaceParameters | null = null;
   private readonly textures: WebGLTexture[] = [];
   private readonly ids = {
     angleX: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamAngleX),
@@ -64,6 +65,12 @@ export class CharacterModel extends CubismUserModel {
     eyeBallY: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeBallY),
     bodyAngleX: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBodyAngleX),
     breath: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBreath),
+    eyeLOpen: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeLOpen),
+    eyeROpen: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeROpen),
+    mouthOpen: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamMouthOpenY),
+    mouthForm: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamMouthForm),
+    browLY: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBrowLY),
+    browRY: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBrowRY),
   };
 
   constructor(
@@ -138,7 +145,7 @@ export class CharacterModel extends CubismUserModel {
     // Tilt is added after saving so it never accumulates, and before the
     // scheduler so physics reacts to it. Touch gaze takes priority over tilt.
     const offsets = this.tiltOffsets;
-    if (offsets && !this.looking) {
+    if (offsets && !this.looking && !this.faceParameters) {
       model.addParameterValueById(this.ids.angleX, offsets.angleX);
       model.addParameterValueById(this.ids.angleY, offsets.angleY);
       model.addParameterValueById(this.ids.angleZ, offsets.angleZ);
@@ -147,8 +154,32 @@ export class CharacterModel extends CubismUserModel {
       model.addParameterValueById(this.ids.bodyAngleX, offsets.bodyAngleX);
     }
 
+    if (this.faceParameters && !this.looking) this.applyFacePose(this.faceParameters);
+
     this.scheduler.onLateUpdate(model, deltaSeconds);
+    // Camera expressions take priority over automatic blinking and expressions.
+    // Values are applied after saveParameters, so they never persist after stop.
+    const face = this.faceParameters;
+    if (face) {
+      if (!this.looking) this.applyFacePose(face);
+      model.setParameterValueById(this.ids.eyeLOpen, face.eyeLOpen);
+      model.setParameterValueById(this.ids.eyeROpen, face.eyeROpen);
+      model.setParameterValueById(this.ids.mouthOpen, face.mouthOpen);
+      model.setParameterValueById(this.ids.mouthForm, face.mouthForm);
+      model.setParameterValueById(this.ids.browLY, face.browLY);
+      model.setParameterValueById(this.ids.browRY, face.browRY);
+    }
     model.update();
+  }
+
+  private applyFacePose(face: FaceParameters): void {
+    const model = this.getModel();
+    model.setParameterValueById(this.ids.angleX, face.angleX);
+    model.setParameterValueById(this.ids.angleY, face.angleY);
+    model.setParameterValueById(this.ids.angleZ, face.angleZ);
+    model.setParameterValueById(this.ids.eyeBallX, face.eyeBallX);
+    model.setParameterValueById(this.ids.eyeBallY, face.eyeBallY);
+    model.setParameterValueById(this.ids.bodyAngleX, face.bodyAngleX);
   }
 
   draw(
@@ -165,6 +196,10 @@ export class CharacterModel extends CubismUserModel {
 
   setTiltOffsets(offsets: ParameterOffsets | null): void {
     this.tiltOffsets = offsets;
+  }
+
+  setFaceParameters(parameters: FaceParameters | null): void {
+    this.faceParameters = parameters;
   }
 
   /** Gaze target in model space; values are clamped to the -1…1 look range. */

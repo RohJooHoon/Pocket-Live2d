@@ -1,4 +1,4 @@
-import type { ParameterOffsets } from '../types';
+import type { FaceParameters, ParameterOffsets } from '../types';
 
 export type RendererStatus =
   | { state: 'loading' }
@@ -29,6 +29,8 @@ export interface CharacterRenderer {
   tap(x: number, y: number): boolean;
   /** Adds tilt offsets on top of motions every frame; null removes them. */
   setTiltOffsets(offsets: ParameterOffsets | null): void;
+  /** Absolute camera pose and expression values; null restores normal animation. */
+  setFaceParameters(parameters: FaceParameters | null): void;
   playMotion(group: string): void;
   /** Applies the next expression, or clears expressions after the last one. */
   cycleExpression(): string | null;

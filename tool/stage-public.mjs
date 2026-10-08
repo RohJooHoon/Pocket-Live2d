@@ -5,6 +5,7 @@
 //   _headers                    deploy/cloudflare/_headers (Cloudflare Pages)
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { stageFaceAssets } from './face-assets.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const characterId = process.env.CHARACTER ?? 'mark';
@@ -22,6 +23,7 @@ cpSync(resolve(characterDir, 'model'), resolve(out, 'model'), {
   filter: (source) => !source.endsWith('README.md'),
 });
 cpSync(resolve(root, 'deploy/cloudflare/_headers'), resolve(out, '_headers'));
+await stageFaceAssets(root, out);
 
 const core = resolve(root, 'vendor/cubism/Core/live2dcubismcore.min.js');
 const shaders = resolve(root, 'vendor/cubism/Framework/Shaders/WebGL');

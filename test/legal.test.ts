@@ -48,7 +48,9 @@ describe('legal documents', () => {
   });
 
   it('privacy policy matches what the page and its hosting do', () => {
-    expect(privacy).toContain('카메라와 마이크를 사용하지 않습니다');
+    expect(privacy).toContain('마이크는 사용하지 않습니다');
+    expect(privacy).toContain('녹화하거나 서버로 보내지 않습니다');
+    expect(privacy).toContain('성능·사용 지표');
     expect(privacy).toContain('쿠키는 사용하지 않습니다');
     expect(privacy).toContain('접속 기록');
     expect(privacy).toContain('개인정보의 국외 이전');

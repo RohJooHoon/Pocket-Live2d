@@ -5,6 +5,8 @@
 
 - 기울이기·흔들기: 기기 동작 센서 (iPhone은 버튼을 눌러 권한 허용)
 - 터치: 드래그하면 시선이 따라오고, 캐릭터를 탭하면 반응 모션
+- 얼굴 따라하기: 전면 카메라로 고개·눈·입·눈썹 움직임 반영 (직접 켜고 권한 허용, 영상은 기기 안에서 처리)
+- 모바일 세로 전용: 가로로 돌리면 세로 안내를 표시하고 조작 차단
 - 첫 방문 때 이용약관·개인정보처리방침 동의
 - 캐릭터 렌더링: Live2D Cubism SDK for Web 5-r.5 (저장소에는 포함하지 않음)
 
@@ -21,6 +23,8 @@ npm run dev          # http://localhost:5173
 ```
 
 SDK 없이 실행하면 화면에 "Live2D SDK가 연결되지 않은 빌드예요"가 나옵니다. 정상입니다.
+첫 `dev`·`build` 실행은 공식 MediaPipe 얼굴 추적 모델(약 3.8 MB)을 내려받아 SHA-256을 검증하고 `vendor/mediapipe/`에 캐시합니다.
+WASM과 모델은 빌드에 포함해 자체 호스팅합니다. 캐시가 없으면 빌드 시 인터넷 연결이 필요합니다.
 
 ### 캐릭터가 보이게 하려면 (Cubism SDK for Web)
 
@@ -43,6 +47,20 @@ npm run dev:https    # https://<PC의 IP>:5173 (자체 서명 인증서 경고�
 ```
 
 기기별 테스트 방법, 박람회 태블릿 설정, 배포와 QR 코드는 [웹 테스트·배포 가이드](docs/WEB_TESTING.md)에 있습니다.
+
+### 얼굴 따라하기
+
+캐릭터가 표시된 뒤 **얼굴 따라하기 켜기**를 누르고 카메라 접근을 허용합니다.
+작은 미리보기에 얼굴이 보이면 첫 자세를 정면으로 보정하며, 고개 방향·눈 깜빡임·입 벌리기·눈썹을 반영합니다.
+미소·시선은 모델에 해당 파라미터가 있는 범위에서 반영됩니다. Mark에는 입 모양(`ParamMouthForm`)이 없어 미소 모양은 바뀌지 않습니다.
+
+카메라 모드에서는 기울이기·흔들기를 잠시 중지하고, 드래그 시선이 고개·시선보다 우선합니다.
+기능을 끄거나 다른 탭으로 이동하거나 모바일을 가로로 돌리면 카메라 촬영도 종료됩니다. 다시 사용하려면 직접 켜야 합니다.
+웹 카메라에는 HTTPS 또는 localhost가 필요합니다. 모바일 HTTP IP 주소에서는 켜지지 않습니다.
+
+추론은 Worker에서 최대 15 fps로 수행하고 한 프레임씩 처리합니다. 카메라 영상·얼굴 값은 저장·전송하지 않습니다.
+MediaPipe의 성능·사용 지표는 Google의 [개인정보 안내](https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice)를 따릅니다.
+실제 iPhone·Android의 추적 감도와 프레임 속도는 실기기 확인이 필요합니다.
 
 ### 인터넷에 올리기 (Cloudflare Pages)
 
@@ -123,7 +141,7 @@ SDK가 없을 때도 페이지가 멈추지 않도록, Cubism Framework는 Core�
 ## 이용약관·라이선스
 
 - [이용약관](legal/terms_of_service.md): Live2D Cubism Core와 캐릭터 데이터 보호 조항 포함
-- [개인정보처리방침](legal/privacy_policy.md): 센서·터치 값은 기기 안에서만 처리, 카메라 미사용
+- [개인정보처리방침](legal/privacy_policy.md): 센서·터치·카메라 영상은 기기 안에서만 처리, MediaPipe 지표 처리 안내
 - [라이선스와 공개 준비](docs/LICENSING.md): Live2D 약관 판단, 공개 전 체크리스트, 박람회·외주·유료화 검토
 
 `Mark`는 Live2D 공식 샘플 모델이며 사용 조건은 [모델 README](characters/mark/model/README.md)에 있습니다.
