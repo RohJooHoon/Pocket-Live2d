@@ -16,22 +16,29 @@
     <main class="stage">
       <canvas id="character-canvas" aria-label="캐릭터"></canvas>
 
-      <header class="top-bar">
+      <header class="top-bar" data-ui>
         <div>
           <span id="service-name" class="brand-label"></span>
           <h1 id="character-name"></h1>
         </div>
-        <button id="info-button" class="icon-button" type="button" aria-label="정보">
+        <div class="header-actions">
+          <button id="hide-ui-button" class="hide-ui-button" type="button" title="화면을 10초 누르면 UI가 다시 나타나요" aria-label="UI 숨기기. 화면을 10초 동안 길게 누르면 다시 표시됩니다.">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.4 5.3A11 11 0 0 1 12 5c6 0 10 7 10 7a18 18 0 0 1-3.1 3.7M6 6a20 20 0 0 0-4 6s4 7 10 7a11 11 0 0 0 5-1.2"/></svg>
+            <span>UI 숨기기</span>
+          </button>
+          <button id="info-button" class="icon-button" type="button" aria-label="정보">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>
-        </button>
+          </button>
+        </div>
       </header>
 
-      <aside id="camera-preview" class="camera-preview" aria-label="카메라 미리보기" hidden>
-        <video id="camera-video" autoplay muted playsinline aria-label="내 얼굴 미리보기"></video>
+      <video id="camera-video" autoplay muted playsinline hidden aria-hidden="true"></video>
+      <aside id="camera-preview" class="camera-preview" aria-label="얼굴 트래킹 포인트" data-ui hidden>
+        <canvas id="face-points" width="240" height="320" role="img" aria-label="얼굴의 위치와 표정을 나타내는 트래킹 포인트"></canvas>
         <p id="camera-status" role="status"></p>
       </aside>
 
-      <footer class="bottom-panel">
+      <footer class="bottom-panel" data-ui>
         <p id="status" class="status" role="status" hidden></p>
         <nav class="controls" aria-label="캐릭터 조작">
           <button id="motion-toggle" type="button" aria-pressed="false" aria-label="기울이기·흔들기 켜기">
@@ -80,6 +87,7 @@
         <form method="dialog"><button class="icon-button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
       </header>
       <p id="info-credit" class="fine-print"></p>
+      <p class="fine-print">‘UI 숨기기’를 누르면 캐릭터만 보여요. 켜 둔 얼굴 따라하기는 계속 작동해요. 화면의 같은 자리를 10초 동안 길게 누르면 UI가 다시 나타나요. 키보드에서는 Escape로 돌아올 수 있어요.</p>
       <p class="fine-print">
         캐릭터 표시에 Live2D Cubism SDK를 사용합니다. Live2D는 Live2D Inc.의 상표이며, 이 페이지는 Live2D Inc.가 만들거나 인증한 것이 아닙니다.
       </p>

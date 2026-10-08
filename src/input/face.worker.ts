@@ -33,6 +33,7 @@ async function handle(message: WorkerRequest): Promise<void> {
       const categories = result.faceBlendshapes[0]?.categories;
       scope.postMessage({
         type: 'result',
+        landmarks: (result.faceLandmarks[0] ?? []).map(({ x, y }) => ({ x, y })),
         observation: matrix && categories ? {
           matrix: matrix.data,
           scores: Object.fromEntries(categories.map((value) => [value.categoryName, value.score])),

@@ -32,9 +32,9 @@ function fixture() {
     requestFrame: vi.fn((callback) => { frame = callback; return 1; }),
     cancelFrame: vi.fn(),
   };
-  const onParameters = vi.fn(), onStatus = vi.fn();
-  const tracker = new FaceTracker({ video: video as unknown as HTMLVideoElement, onParameters, onStatus }, platform);
-  return { tracker, video, worker, platform, cameraStream, onParameters, onStatus, frame: (time: number) => frame(time) };
+  const onParameters = vi.fn(), onStatus = vi.fn(), onLandmarks = vi.fn();
+  const tracker = new FaceTracker({ video: video as unknown as HTMLVideoElement, onParameters, onStatus, onLandmarks }, platform);
+  return { tracker, video, worker, platform, cameraStream, onParameters, onStatus, onLandmarks, frame: (time: number) => frame(time) };
 }
 
 async function flush() { for (let i = 0; i < 5; i++) await Promise.resolve(); }
@@ -118,15 +118,17 @@ describe('camera lifecycle', () => {
     await started(f);
     f.frame(1000);
     await flush();
-    f.worker.emit({ type: 'result', observation: {
+    f.worker.emit({ type: 'result', landmarks: [{ x: 0.5, y: 0.4 }], observation: {
       matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -50, 1], scores: { jawOpen: 0.5 },
     } });
     expect(f.onParameters).toHaveBeenLastCalledWith(expect.objectContaining({ mouthOpen: 0.75 }));
+    expect(f.onLandmarks).toHaveBeenLastCalledWith([{ x: 0.5, y: 0.4 }]);
     f.video.currentTime = 2;
     f.frame(1600);
     await flush();
-    f.worker.emit({ type: 'result', observation: null });
+    f.worker.emit({ type: 'result', observation: null, landmarks: [] });
     expect(f.onParameters).toHaveBeenLastCalledWith(null);
+    expect(f.onLandmarks).toHaveBeenLastCalledWith([]);
     f.tracker.stop();
   });
 
@@ -145,6 +147,18 @@ describe('camera lifecycle', () => {
     onEnded();
     expect(next.tracker.isEnabled).toBe(false);
     expect(next.worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it('clears preview points on stop and ignores late worker results', async () => {
+    const f = fixture();
+    await started(f);
+    f.worker.emit({ type: 'result', observation: null, landmarks: [{ x: 0.5, y: 0.5 }] });
+    expect(f.onLandmarks).toHaveBeenLastCalledWith([{ x: 0.5, y: 0.5 }]);
+    f.tracker.stop();
+    expect(f.onLandmarks).toHaveBeenLastCalledWith([]);
+    f.onLandmarks.mockClear();
+    f.worker.emit({ type: 'result', observation: null, landmarks: [{ x: 0.2, y: 0.2 }] });
+    expect(f.onLandmarks).not.toHaveBeenCalled();
   });
 
   it('cleans up video when autoplay fails and explains denied permissions', async () => {

@@ -5,6 +5,8 @@ import privacyPolicy from '../legal/privacy_policy.md?raw';
 import termsOfService from '../legal/terms_of_service.md?raw';
 import { SERVICE_NAME } from './config';
 import { FaceTracker } from './input/faceTracker';
+import { drawFacePoints } from './input/facePoints';
+import { HoldToRestore } from './input/holdToRestore';
 import { MotionSensors, requestMotionPermission } from './input/motionSensors';
 import { TapTracker } from './input/tap';
 import { NEUTRAL_ORIENTATION, OrientationFilter, tiltToParameters } from './input/tilt';
@@ -39,6 +41,8 @@ const portraitDialog = element<HTMLDialogElement>('portrait-dialog');
 const cameraToggle = element<HTMLButtonElement>('camera-toggle');
 const cameraPreview = element('camera-preview');
 const cameraStatus = element('camera-status');
+const cameraVideo = element<HTMLVideoElement>('camera-video');
+const facePointsCanvas = element<HTMLCanvasElement>('face-points');
 const mobileLandscape = window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: landscape)');
 
 document.title = `${character.name} · ${SERVICE_NAME}`;
@@ -134,10 +138,49 @@ function canvasPoint(event: PointerEvent): { x: number; y: number } {
 }
 
 const taps = new TapTracker();
+let uiHidden = false;
+const restoreHold = new HoldToRestore(() => {
+  cancelPointerGesture();
+  setUiHidden(false);
+});
+
+function cancelPointerGesture(): void {
+  restoreHold.cancelAll();
+  const pointerId = taps.activePointerId;
+  if (pointerId != null) {
+    taps.cancel(pointerId);
+    if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+  }
+  renderer?.releaseLook();
+}
+
+function setUiHidden(hidden: boolean): void {
+  restoreHold.cancelAll();
+  uiHidden = hidden;
+  if (hidden) {
+    if (infoDialog.open) infoDialog.close();
+    if (documentDialog.open) documentDialog.close();
+    // Do not leave keyboard focus on a control which has become invisible.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  }
+  document.body.classList.toggle('ui-hidden', hidden);
+}
+
+element('hide-ui-button').addEventListener('click', () => setUiHidden(true));
+window.addEventListener('blur', cancelPointerGesture);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && uiHidden) setUiHidden(false);
+});
 
 function wirePointer(): void {
   canvas.addEventListener('pointerdown', (event) => {
     if (isRuntimePaused()) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (uiHidden) {
+      event.preventDefault();
+      if (event.isPrimary) restoreHold.down(event.pointerId, event.clientX, event.clientY);
+      else restoreHold.cancelAll();
+    }
     if (!taps.down(event.pointerId, event.clientX, event.clientY, event.timeStamp)) return;
     canvas.setPointerCapture(event.pointerId);
     const point = canvasPoint(event);
@@ -145,12 +188,14 @@ function wirePointer(): void {
   });
 
   canvas.addEventListener('pointermove', (event) => {
+    restoreHold.move(event.pointerId, event.clientX, event.clientY);
     if (!taps.move(event.pointerId, event.clientX, event.clientY)) return;
     const point = canvasPoint(event);
     renderer?.lookAt(point.x, point.y);
   });
 
   canvas.addEventListener('pointerup', (event) => {
+    restoreHold.cancel(event.pointerId);
     const result = taps.up(event.pointerId, event.timeStamp);
     if (!result.tracked) return;
     renderer?.releaseLook();
@@ -161,7 +206,15 @@ function wirePointer(): void {
   });
 
   canvas.addEventListener('pointercancel', (event) => {
+    restoreHold.cancel(event.pointerId);
     if (taps.cancel(event.pointerId)) renderer?.releaseLook();
+  });
+  canvas.addEventListener('lostpointercapture', (event) => {
+    restoreHold.cancel(event.pointerId);
+    if (taps.cancel(event.pointerId)) renderer?.releaseLook();
+  });
+  canvas.addEventListener('contextmenu', (event) => {
+    if (uiHidden) event.preventDefault();
   });
 }
 
@@ -204,19 +257,12 @@ function isRuntimePaused(): boolean {
 function syncRuntimeState(): void {
   const paused = isRuntimePaused();
   renderer?.setPaused(paused);
+  if (paused) cancelPointerGesture();
   if (paused && camera.isEnabled) {
     camera.stop();
     return;
   }
   cancelAnimationFrame(tiltFrame);
-  if (paused) {
-    const pointerId = taps.activePointerId;
-    if (pointerId != null) {
-      taps.cancel(pointerId);
-      if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
-    }
-    renderer?.releaseLook();
-  }
   if (motionEnabled && !paused && !camera.isEnabled) {
     tiltTarget = { ...NEUTRAL_ORIENTATION };
     tiltFilter.reset();
@@ -281,8 +327,9 @@ function tryPortraitLock(): void {
 
 let cameraWasEnabled = false;
 const camera = new FaceTracker({
-  video: element<HTMLVideoElement>('camera-video'),
+  video: cameraVideo,
   onParameters: (parameters) => renderer?.setFaceParameters(parameters),
+  onLandmarks: (points) => drawFacePoints(facePointsCanvas, points, cameraVideo),
   onStatus: (status) => {
     const enabled = camera.isEnabled;
     cameraToggle.setAttribute('aria-pressed', String(enabled));
@@ -308,6 +355,7 @@ cameraToggle.addEventListener('click', () => {
   else if (ready && !isRuntimePaused()) void camera.start();
 });
 window.addEventListener('pagehide', () => {
+  cancelPointerGesture();
   camera.stop();
   setMotionEnabled(false);
   renderer?.setPaused(true);

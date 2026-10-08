@@ -1,6 +1,6 @@
 import type { FaceParameters } from '../types';
 import { FaceMapper, FaceSmoother } from './faceMapping';
-import type { FaceWorkerReply, FaceWorkerRequest } from './faceProtocol';
+import type { FacePoint, FaceWorkerReply, FaceWorkerRequest } from './faceProtocol';
 
 export type CameraStatus =
   | { state: 'starting' }
@@ -11,6 +11,7 @@ export type CameraStatus =
 export interface FaceTrackerOptions {
   video: HTMLVideoElement;
   onParameters: (parameters: FaceParameters | null) => void;
+  onLandmarks: (points: FacePoint[]) => void;
   onStatus: (status: CameraStatus) => void;
 }
 
@@ -159,6 +160,7 @@ export class FaceTracker {
     this.mapper.reset();
     this.smoother.reset();
     this.options.onParameters(null);
+    this.options.onLandmarks([]);
     this.options.onStatus({ state: 'stopped' });
   }
 
@@ -169,6 +171,7 @@ export class FaceTracker {
   }
 
   private applyResult(session: Session, reply: Extract<FaceWorkerReply, { type: 'result' }>): void {
+    this.options.onLandmarks(reply.landmarks);
     const parameters = reply.observation ? this.mapper.map(reply.observation) : null;
     const now = session.lastFrame;
     if (parameters) {
