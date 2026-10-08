@@ -247,10 +247,12 @@ npm run deploy -- mark
 1. SDK가 준비됐는지 확인합니다. 없으면 멈춥니다.
 2. `dist/mark/`를 빌드합니다.
 3. 결과물에 Core가 들어 있는지 확인합니다.
-4. Cloudflare Pages 프로젝트 `motionmate-mark`를 만듭니다 (이미 있으면 건너뜀).
+4. Cloudflare Pages 프로젝트 `pocket-live2d`를 만듭니다 (이미 있으면 건너뜀).
 5. 업로드합니다.
 
-- 끝나면 `https://motionmate-mark.pages.dev` 주소가 나옵니다.
+- 기본 사이트의 배포 주소는 `https://pocket-live2d.pages.dev`입니다.
+- 기본 캐릭터 `mark`의 `pagesProject`는 `pocket-live2d`입니다. 다른 캐릭터의 기본 프로젝트는 `pocket-live2d-<id>`입니다.
+- 이 설정은 다음 배포 대상을 정합니다. 이전 Cloudflare 프로젝트나 기존 도메인을 자동으로 이전하지 않습니다.
 - 프로젝트 이름을 바꾸려면 `characters/<id>/character.json`에 `"pagesProject": "원하는-이름"`을 넣습니다. 소문자, 숫자, `-`만 쓸 수 있습니다.
 - 올리기 전에 명령만 확인하려면 `npm run deploy -- mark --dry-run`을 실행합니다.
 

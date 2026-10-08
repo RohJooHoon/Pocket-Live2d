@@ -4,7 +4,8 @@
 //   npm run deploy -- <character-id> [--dry-run]
 //
 // The Pages project name is `pagesProject` in characters/<id>/character.json,
-// or motionmate-<id> when unset. Log in once with `npx wrangler login`.
+// or pocket-live2d-<id> when unset. Mark uses pocket-live2d for the main website.
+// Log in once with `npx wrangler login`.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -39,7 +40,7 @@ function run(command, commandArgs, options = {}) {
 const configPath = resolve(root, 'characters', characterId, 'character.json');
 if (!existsSync(configPath)) fail(`Unknown character "${characterId}" (${configPath} is missing).`);
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
-const project = config.pagesProject ?? `motionmate-${characterId}`;
+const project = config.pagesProject ?? `pocket-live2d-${characterId}`;
 if (!/^[a-z0-9][a-z0-9-]{0,57}$/.test(project)) {
   fail(`Pages project name "${project}" must use lowercase letters, numbers and dashes.`);
 }

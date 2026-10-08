@@ -1,4 +1,4 @@
-# MotionMate
+# Pocket Live2D
 
 휴대폰을 기울이고, 흔들고, 화면을 만지면 반응하는 **Live2D 캐릭터 웹페이지**입니다.
 캐릭터 하나가 사이트 하나가 되며, 도메인마다 다른 캐릭터를 올리고 QR 코드로 접속하는 용도를 기준으로 만들었습니다.
@@ -13,7 +13,7 @@
 - 캐릭터 렌더링: Live2D Cubism SDK for Web 5-r.5 (저장소에는 포함하지 않음)
 
 > 이전에는 Flutter 앱(Pocket Live2D)이었고, 웹으로 전환했습니다. 앱 코드는 git 기록에 남아 있습니다.
-> MotionMate는 작업 이름입니다. 같은 이름을 쓰는 앱이 있어 공개 전에 이름을 확정해야 합니다. 이름은 `src/config.ts` 한 곳에서 바꿉니다.
+> 서비스 이름은 Pocket Live2D, npm 패키지 이름은 `pocket-live2d`입니다. 화면 이름은 `src/config.ts`에서 관리합니다. Live2D 상표 사용 조건은 [라이선스 문서](docs/LICENSING.md)를 확인하세요.
 
 ## 빠른 시작
 
@@ -80,6 +80,10 @@ SDK가 준비된 PC에서 빌드해 Cloudflare Pages에 직접 업로드합니�
 npx wrangler login         # 처음 한 번 (Node.js 22 이상 필요)
 npm run deploy -- mark     # 빌드 → Core 포함 확인 → 업로드
 ```
+
+기본 사이트의 Cloudflare Pages 프로젝트는 `pocket-live2d`, 배포 주소는 `https://pocket-live2d.pages.dev`입니다.
+`characters/mark/character.json`의 `pagesProject`로 지정하며, 다른 캐릭터는 별도 설정이 없으면 `pocket-live2d-<id>`를 사용합니다.
+이 설정으로 배포하면 새 프로젝트를 만들거나 같은 이름의 기존 프로젝트를 갱신합니다. 이전 프로젝트의 이름이나 도메인을 자동으로 옮기지는 않습니다.
 
 Cloudflare의 GitHub 연동 자동 빌드는 쓰지 않습니다. Cloudflare 서버에는 SDK가 없고, SDK를 저장소에 넣을 수도 없기 때문입니다.
 커스텀 도메인 연결과 QR 코드는 [웹 테스트·배포 가이드 7장](docs/WEB_TESTING.md#7-배포와-qr-코드-cloudflare-pages)을 보세요.

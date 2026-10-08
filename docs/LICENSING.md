@@ -1,6 +1,6 @@
 # 라이선스와 공개 준비
 
-MotionMate 캐릭터 웹사이트를 공개하기 전에 확인할 Live2D 약관 판단, 코드에 반영한 내용, 체크리스트, 박람회·외주·유료화 검토를 정리한 문서입니다.
+Pocket Live2D 캐릭터 웹사이트를 공개하기 전에 확인할 Live2D 약관 판단, 코드에 반영한 내용, 체크리스트, 박람회·외주·유료화 검토를 정리한 문서입니다.
 
 - 기준 약관:
   - Live2D Proprietary Software License v2.1 (Cubism Core)
@@ -42,7 +42,7 @@ MotionMate 캐릭터 웹사이트를 공개하기 전에 확인할 Live2D 약관
 
 | 약관 조항 | 반영 |
 |---|---|
-| 5.3.1 계약 없이 작품 이름에 Live2D 상표 사용 금지 | 서비스 이름은 `src/config.ts`의 `SERVICE_NAME` 한 곳에서 관리. 약관 테스트가 문서 제목에 Live2D가 없는지 확인 |
+| 5.3.1 출판 허락 계약 없이 작품 이름에 Live2D 상표 사용 금지 | 사용자 요청으로 서비스 이름을 Pocket Live2D로 지정. `src/config.ts`에서 관리하며, 약관 테스트는 문서 제목과 설정 이름의 일치를 확인. 이름 변경은 사용 허가를 뜻하지 않으며, 웹사이트도 이 조항의 대상이므로 공개 시 계약·허가 조건 확인 필요 |
 | 5.2.2 최종 사용자가 Core 보호 조항에 동의 | [이용약관](../legal/terms_of_service.md) 제5~7조, 첫 방문 동의 화면 |
 | 6.1, 6.2 Core 수정·공개 금지 | Core와 Framework는 저장소에 넣지 않음. `tool/prepare_cubism_web.py`로 로컬에만 준비. CI가 결과물에 SDK 파일이 없는지 검사 |
 | 3.1, 6.5 SDK를 제3자 컴퓨터에 설치 금지 | 협업자는 각자 SDK를 받아 약관에 동의. SDK를 넣은 빌드는 자기 PC에서 |
@@ -54,7 +54,8 @@ MotionMate 캐릭터 웹사이트를 공개하기 전에 확인할 Live2D 약관
 
 - [ ] 약관·방침의 자리표시자 채우기: `[운영자 이름]`, `[문의 이메일]`, `[공개일]`
 - [ ] 약관이나 방침을 바꾸면 `src/config.ts`의 `LEGAL_CONSENT_VERSION`을 올려 다시 동의받기
-- [ ] 서비스 이름 확정. MotionMate는 Google Play에 비슷한 이름의 앱이 있음. KIPRIS 등에서 상표 확인
+- [x] 서비스 이름 Pocket Live2D 확정, npm 패키지와 Cloudflare 배포 이름은 `pocket-live2d`
+- [ ] 공개 이름의 Live2D 상표 사용 조건 확인. 웹사이트라는 이유만으로 Core 약관 5.3.1이 면제되지 않음
 - [x] 호스팅: Cloudflare Pages 직접 업로드 (`npm run deploy -- <id>`). 개인정보처리방침에 위탁과 국외 이전(Cloudflare, Inc.) 고지
 - [ ] 캐릭터별 도메인 연결 (기본 `<프로젝트>.pages.dev`도 https)
 - [ ] **빌드 결과물(dist)에는 Core가 들어 있으므로** git에 커밋되는 배포 방식(GitHub Pages, Cloudflare의 GitHub 연동 빌드 등)을 쓰지 않기

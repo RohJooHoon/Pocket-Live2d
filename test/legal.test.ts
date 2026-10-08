@@ -35,10 +35,9 @@ describe('legal documents', () => {
   it.each([
     ['terms', terms],
     ['privacy', privacy],
-  ])('%s is titled with the service name and never with the Live2D trademark', (_, source) => {
+  ])('%s is titled with the configured service name', (_, source) => {
     const [title] = parseLegalMarkdown(source);
     expect(title).toEqual({ type: 'heading1', text: expect.stringMatching(new RegExp(`^${SERVICE_NAME} `)) });
-    expect(title.text).not.toContain('Live2D');
   });
 
   it('terms protect the bundled Cubism Core and character data', () => {

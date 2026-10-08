@@ -10,7 +10,7 @@ export interface CharacterConfig {
   shakeMotion: string;
   /** Rights notice required by the character's license, shown in the info dialog. */
   credit?: string;
-  /** Cloudflare Pages project used by `npm run deploy` (default: motionmate-<id>). */
+  /** Cloudflare Pages project used by `npm run deploy` (default: pocket-live2d-<id>). */
   pagesProject?: string;
 }
 

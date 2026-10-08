@@ -1,9 +1,9 @@
 {
-  "name": "motionmate-web",
+  "name": "pocket-live2d",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Interactive Live2D character web pages that react to tilt, shake and touch.",
+  "description": "Pocket Live2D: interactive character web pages with tilt, shake, touch and face tracking.",
   "scripts": {
     "stage": "node tool/stage-public.mjs",
     "dev": "npm run stage && vite --host",
