@@ -1,6 +1,7 @@
 import './style.css';
 
 import { createRenderer } from '@cubism-adapter';
+import { loadCharacter } from './characters/loadCharacter';
 import privacyPolicy from '../legal/privacy_policy.md?raw';
 import termsOfService from '../legal/terms_of_service.md?raw';
 import { SERVICE_NAME } from './config';
@@ -15,7 +16,7 @@ import { parseLegalMarkdown, renderLegalBlocks } from './legal/markdown';
 import type { CharacterRenderer, RendererStatus } from './live2d/renderer';
 import type { OrientationState } from './types';
 
-const character = __CHARACTER__;
+let character = __CHARACTER__;
 
 const documents = {
   terms: { title: '이용약관', source: termsOfService },
@@ -45,12 +46,12 @@ const cameraVideo = element<HTMLVideoElement>('camera-video');
 const facePointsCanvas = element<HTMLCanvasElement>('face-points');
 const mobileLandscape = window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: landscape)');
 
-document.title = `${character.name} · ${SERVICE_NAME}`;
+document.title = SERVICE_NAME;
 element('service-name').textContent = SERVICE_NAME;
-element('character-name').textContent = character.name;
+element('character-name').textContent = '캐릭터';
 element('consent-title').textContent = `${SERVICE_NAME} 시작하기`;
 element('info-title').textContent = SERVICE_NAME;
-element('info-credit').textContent = character.credit ?? '';
+element('info-credit').textContent = '';
 
 // --- Status line -----------------------------------------------------------
 
@@ -105,14 +106,38 @@ element('info-button').addEventListener('click', () => infoDialog.showModal());
 
 let renderer: CharacterRenderer | null = null;
 let ready = false;
+let characterStarted = false;
 
 function startCharacter(): void {
+  if (characterStarted) return;
+  characterStarted = true;
+  wirePointer();
+  wireButtons();
+  wireVisibility();
+  void loadAndStartCharacter();
+}
+
+async function loadAndStartCharacter(): Promise<void> {
   showStatus();
+  let modelDirectory: string;
+  try {
+    const selected = await loadCharacter(window.location.pathname, __MODEL_BASE_URL__, __CHARACTER__, window.location.origin);
+    character = selected.character;
+    modelDirectory = selected.modelDirectory;
+    document.title = `${character.name} · ${SERVICE_NAME}`;
+    element('character-name').textContent = character.name;
+    element('info-credit').textContent = character.credit ?? '';
+  } catch (error) {
+    console.error('Character:', error);
+    rendererMessage = error instanceof Error ? error.message : '캐릭터를 불러오지 못했어요.';
+    showStatus();
+    return;
+  }
   renderer = createRenderer({
     canvas,
-    modelDirectory: './model/',
+    modelDirectory,
     modelFile: character.model,
-    shaderDirectory: './cubism/shaders/WebGL/',
+    shaderDirectory: '/cubism/shaders/WebGL/',
     idleMotion: character.idleMotion,
     tapMotion: character.tapMotion,
     onStatus: (status) => {
@@ -126,9 +151,6 @@ function startCharacter(): void {
       if (status.state === 'error' && camera.isEnabled) camera.stop();
     },
   });
-  wirePointer();
-  wireButtons();
-  wireVisibility();
   syncRuntimeState();
 }
 

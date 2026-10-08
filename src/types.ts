@@ -3,7 +3,7 @@ export interface CharacterConfig {
   id: string;
   /** Name shown on the page. */
   name: string;
-  /** model3.json file name inside characters/<id>/model/. */
+  /** model3.json filename in the selected local or R2 model folder. */
   model: string;
   idleMotion: string;
   tapMotion: string;

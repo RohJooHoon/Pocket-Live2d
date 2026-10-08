@@ -4,6 +4,9 @@ dist/
 .public/
 coverage/
 *.log
+.env.local
+.env.*.local
+.model-uploads/
 
 # IDE
 .idea/

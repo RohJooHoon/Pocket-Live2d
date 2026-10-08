@@ -130,9 +130,9 @@ export class FaceTracker {
       };
       worker.onerror = () => this.fail(session, '얼굴 추적을 불러오지 못했어요. 다시 켜 주세요.');
       const request: FaceWorkerRequest = {
-        type: 'init', runtimeUrl: this.platform.assetUrl('./face/vision_bundle.js'),
-        wasmRoot: this.platform.assetUrl('./face/wasm'),
-        modelUrl: this.platform.assetUrl('./face/face_landmarker.task'),
+        type: 'init', runtimeUrl: this.platform.assetUrl('/face/vision_bundle.js'),
+        wasmRoot: this.platform.assetUrl('/face/wasm'),
+        modelUrl: this.platform.assetUrl('/face/face_landmarker.task'),
       };
       worker.postMessage(request);
       if (!await ready || this.session !== session) return;

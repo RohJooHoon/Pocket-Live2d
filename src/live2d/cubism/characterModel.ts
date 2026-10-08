@@ -406,6 +406,7 @@ export class CharacterModel extends CubismUserModel {
   private loadTexture(url: string): Promise<WebGLTexture> {
     return new Promise((resolve, reject) => {
       const image = new Image();
+      image.crossOrigin = 'anonymous';
       image.onload = () => {
         const gl = this.gl;
         const texture = gl.createTexture();

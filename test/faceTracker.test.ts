@@ -28,7 +28,7 @@ function fixture() {
     getStream: vi.fn(async () => cameraStream.value),
     createWorker: vi.fn(() => worker as unknown as Worker),
     capture: vi.fn(async () => ({ close: vi.fn() }) as unknown as ImageBitmap),
-    assetUrl: (path) => 'https://example.com/' + path,
+    assetUrl: (path) => new URL(path, 'https://example.com/nested/character/').href,
     requestFrame: vi.fn((callback) => { frame = callback; return 1; }),
     cancelFrame: vi.fn(),
   };

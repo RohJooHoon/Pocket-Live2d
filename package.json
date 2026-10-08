@@ -11,6 +11,7 @@
     "build": "npm run stage && npm run typecheck && vite build",
     "preview": "vite preview --host",
     "deploy": "node tool/deploy-cloudflare.mjs",
+    "model:prepare": "python3 tool/prepare_model_upload.py",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:sdk": "tsc --noEmit -p tsconfig.sdk.json",
     "test": "vitest run",

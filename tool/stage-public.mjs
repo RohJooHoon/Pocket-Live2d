@@ -23,6 +23,9 @@ cpSync(resolve(characterDir, 'model'), resolve(out, 'model'), {
   filter: (source) => !source.endsWith('README.md'),
 });
 cpSync(resolve(root, 'deploy/cloudflare/_headers'), resolve(out, '_headers'));
+// Optional prepared folders support same-origin /<slug> testing without R2.
+const preparedModels = resolve(root, '.model-uploads/models');
+if (existsSync(preparedModels)) cpSync(preparedModels, resolve(out, 'models'), { recursive: true });
 await stageFaceAssets(root, out);
 
 const core = resolve(root, 'vendor/cubism/Core/live2dcubismcore.min.js');

@@ -1,7 +1,7 @@
 # Pocket Live2D
 
 휴대폰을 기울이고, 흔들고, 화면을 만지면 반응하는 **Live2D 캐릭터 웹페이지**입니다.
-캐릭터 하나가 사이트 하나가 되며, 도메인마다 다른 캐릭터를 올리고 QR 코드로 접속하는 용도를 기준으로 만들었습니다.
+같은 사이트에서 `/haru`, `/mark`처럼 URL 경로로 캐릭터를 고릅니다. 모델 데이터를 Cloudflare R2에 두면 폴더 업로드만으로 새 캐릭터를 추가할 수 있습니다.
 
 - 기울이기·흔들기: 기기 동작 센서 (iPhone은 버튼을 눌러 권한 허용)
 - 터치: 드래그하면 시선이 따라오고, 캐릭터를 탭하면 반응 모션
@@ -9,6 +9,7 @@
 - 얼굴 미리보기는 영상 대신 트래킹 포인트만 표시
 - UI 숨기기: 캐릭터만 보기, 화면을 10초 길게 누르면 UI 복귀
 - 모바일 세로 전용: 가로로 돌리면 세로 안내를 표시하고 조작 차단
+- URL 경로별 모델 로딩: R2 또는 같은 출처 `/models/`에서 캐릭터 데이터 읽기
 - 첫 방문 때 이용약관·개인정보처리방침 동의
 - 캐릭터 렌더링: Live2D Cubism SDK for Web 5-r.5 (저장소에는 포함하지 않음)
 
@@ -88,7 +89,20 @@ npm run deploy -- mark     # 빌드 → Core 포함 확인 → 업로드
 Cloudflare의 GitHub 연동 자동 빌드는 쓰지 않습니다. Cloudflare 서버에는 SDK가 없고, SDK를 저장소에 넣을 수도 없기 때문입니다.
 커스텀 도메인 연결과 QR 코드는 [웹 테스트·배포 가이드 7장](docs/WEB_TESTING.md#7-배포와-qr-코드-cloudflare-pages)을 보세요.
 
-## 캐릭터 사이트 만들기
+## R2에 모델만 추가하기
+
+처음 `.env.local`에 `VITE_MODEL_BASE_URL=https://모델-저장소-공개주소/models/`를 설정하고 사이트를 배포합니다.
+이후 새 캐릭터는 모델 폴더와 `character.json`을 R2의 `models/<이름>/`에 올리면 `/<이름>`에서 읽습니다. 코드나 모델 목록을 수정하거나 사이트를 다시 빌드할 필요는 없습니다.
+R2 버킷 공개 설정과 CORS가 필요하며, 모델의 `.moc3`·텍스처·모션 등 참조 파일도 함께 올립니다. API 키는 사이트에 넣지 않습니다.
+
+```bash
+npm run model:prepare -- haru /path/to/Haru --name "하루"
+```
+
+`.model-uploads/models/haru/`가 만들어집니다. 모델 JSON의 참조 파일만 복사하고 이름·모델 파일·모션 그룹을 담은 `character.json`을 생성합니다.
+기본 `/`는 사이트에 함께 넣은 데모를 유지하고, 경로가 지정되면 해당 폴더를 읽습니다. 상세 설정과 업로드 방법: [R2 모델 저장과 URL 연결](docs/R2_MODELS.md).
+
+## 기본 캐릭터를 사이트와 함께 빌드하기
 
 캐릭터마다 `characters/<id>/` 폴더를 만듭니다.
 
@@ -132,6 +146,7 @@ $env:CHARACTER="mark"; npm run build    # Windows PowerShell
 | `npm run typecheck:sdk` | SDK 렌더러까지 타입 검사 (SDK를 준비한 뒤) |
 | `npm run build` | 캐릭터 사이트 빌드 (`CHARACTER`로 캐릭터 선택, 기본 mark) |
 | `npm run validate:models` | 모델 파일 참조와 파일 형식 검사 |
+| `npm run model:prepare -- <이름> <모델폴더>` | R2 업로드용 참조 파일과 character.json 준비 |
 
 ## 구조
 
