@@ -5,7 +5,7 @@
 
 | 사이트 주소 | 읽는 R2 파일 |
 |---|---|
-| `/` | 사이트에 함께 빌드한 기본 캐릭터 |
+| `/` | R2 설정 시 기본 캐릭터의 `character.json`, 설정이 없으면 함께 빌드한 데모 |
 | `/haru` 또는 `/haru/` | `models/haru/character.json` → 같은 폴더의 모델 파일 |
 | `/mark` | `models/mark/character.json` → 같은 폴더의 모델 파일 |
 
@@ -141,3 +141,9 @@ Pages는 최상위 `404.html`이 없으면 SPA 방식으로 경로를 앱에 연
 - [R2 CORS](https://developers.cloudflare.com/r2/buckets/cors/)
 - [R2 업로드](https://developers.cloudflare.com/r2/objects/upload-objects/)
 - [Pages SPA 경로 처리](https://developers.cloudflare.com/pages/configuration/serving-pages/)
+
+## 이 저장소의 업로드·검증 명령
+
+[실제 버킷 설정과 업로드 가이드](R2_SETUP.md)에 따라 `R2_BUCKET=pocket-live2d`를 지정하고 `npm run upload:models -- mark`로 직접 업로드할 수 있습니다. `npm run verify:models -- --origin https://pocket-live2d.pages.dev`는 모든 객체의 공개 접근·CORS·Content-Type·SHA-256을 검사합니다.
+
+`VITE_MODEL_BASE_URL`에 접두사 없이 공개 버킷 주소만 넣으면 `characters/<id>/model/` 구조를 사용합니다. 기존처럼 `/models/` 접두사를 넣으면 위 문서의 `models/<id>/` 구조를 사용합니다. 두 방식 모두 `character.json`을 모델과 같은 폴더에 둡니다. R2를 설정한 빌드는 로컬 모델을 Pages에 포함하지 않으며, 웹 앱·SDK·카메라 파일은 기존대로 포함합니다.

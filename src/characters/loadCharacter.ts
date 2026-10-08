@@ -21,6 +21,9 @@ export function modelSourceUrl(source: string, origin: string): URL {
     throw new Error('모델 저장소 주소 설정을 확인해 주세요.');
   }
   if (!url.pathname.endsWith('/')) url.pathname += '/';
+  // A bare R2 public URL uses the uploaded characters/<id>/model/ layout.
+  // An explicit prefix (e.g. /models/) keeps the existing flat-folder layout.
+  if (source && url.pathname === '/') url.pathname = '/characters/';
   return url;
 }
 
@@ -50,10 +53,12 @@ export async function loadCharacter(
   fetcher: typeof fetch = fetch,
 ): Promise<SelectedCharacter> {
   const id = characterIdFromPath(pathname);
-  if (id == null || (!source && id === bundled.id)) {
+  if (!source && (id == null || id === bundled.id)) {
     return { character: bundled, modelDirectory: '/model/' };
   }
-  const directory = new URL(`${id}/`, modelSourceUrl(source, origin));
+  const bareSource = source && new URL(source, origin).pathname === '/';
+  const selectedId = id ?? bundled.id;
+  const directory = new URL(`${selectedId}/${bareSource ? 'model/' : ''}`, modelSourceUrl(source, origin));
   let response: Response;
   try {
     response = await fetcher(new URL('character.json', directory), {
@@ -67,5 +72,5 @@ export async function loadCharacter(
   let data: unknown;
   try { data = await response.json(); }
   catch { throw new Error('캐릭터 정보 파일을 읽지 못했어요.'); }
-  return { character: parseCharacterDescriptor(data, id), modelDirectory: directory.href };
+  return { character: parseCharacterDescriptor(data, selectedId), modelDirectory: directory.href };
 }

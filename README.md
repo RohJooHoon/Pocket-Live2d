@@ -174,3 +174,16 @@ SDK가 없을 때도 페이지가 멈추지 않도록, Cubism Framework는 Core�
 - [라이선스와 공개 준비](docs/LICENSING.md): Live2D 약관 판단, 공개 전 체크리스트, 박람회·외주·유료화 검토
 
 `Mark`는 Live2D 공식 샘플 모델이며 사용 조건은 [모델 README](characters/mark/model/README.md)에 있습니다.
+
+### R2 업로드 자동화
+
+모델을 별도 R2 버킷에 올리고 공개 파일·CORS·무결성을 검증하는 명령을 추가했습니다.
+
+```bash
+npm run upload:models -- mark --dry-run
+npm run upload:models -- mark
+npm run verify:models -- --origin https://pocket-live2d.pages.dev
+npm run deploy -- --project pocket-live2d --dry-run
+```
+
+버킷 이름·공개 주소·권한 설정은 [R2 업로드 가이드](docs/R2_SETUP.md)에 있습니다. 기존 경로 선택·카메라·UI 기능을 그대로 사용하며, 공개 버킷 주소만 지정하는 `characters/<id>/model/` 구조와 `/models/` 접두사를 지정하는 기존 구조를 모두 지원합니다.

@@ -43,6 +43,13 @@ jobs:
             CHARACTER="$(basename "$dir")" npm run build
           done
 
+      - name: Verify R2 build excludes model assets
+        run: |
+          VITE_MODEL_BASE_URL=https://models.example.com npm run build
+          test ! -d dist/mark/model
+          test ! -d dist/mark/models
+          test -f dist/mark/face/face_landmarker.task
+
       - name: Make sure no Cubism SDK files were published
         run: |
           if find dist -name 'live2dcubismcore*' -o -name '*.frag' -o -name '*.vert' | grep -q .; then

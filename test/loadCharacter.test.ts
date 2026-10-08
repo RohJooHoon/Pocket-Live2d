@@ -14,7 +14,6 @@ describe('URL-selected characters', () => {
     for (const path of ['/', '/index.html', '/mark', '/mark/']) {
       expect(await loadCharacter(path, '', bundled, origin, fetcher)).toEqual({ character: bundled, modelDirectory: '/model/' });
     }
-    expect((await loadCharacter('/', 'https://models.example.com/models/', bundled, origin, fetcher)).character).toEqual(bundled);
     expect(fetcher).not.toHaveBeenCalled();
   });
 
@@ -31,6 +30,18 @@ describe('URL-selected characters', () => {
     const fetcher = vi.fn<typeof fetch>(async () => json({ model: 'NewMark.model3.json' }));
     const selected = await loadCharacter('/mark', 'https://models.example.com/models/', bundled, origin, fetcher);
     expect(selected.character.model).toBe('NewMark.model3.json');
+  });
+  it('loads the default root from R2 when local models are excluded', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => json({ model: 'NewMark.model3.json' }));
+    const selected = await loadCharacter('/', 'https://models.example.com/models/', bundled, origin, fetcher);
+    expect(selected.character.model).toBe('NewMark.model3.json');
+    expect(String(fetcher.mock.calls[0][0])).toBe('https://models.example.com/models/mark/character.json');
+  });
+  it('uses the current uploaded nested layout with a bare public R2 URL', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => json({ model: 'Mark.model3.json' }));
+    const selected = await loadCharacter('/mark/', 'https://pub.example.com', bundled, origin, fetcher);
+    expect(String(fetcher.mock.calls[0][0])).toBe('https://pub.example.com/characters/mark/model/character.json');
+    expect(selected.modelDirectory).toBe('https://pub.example.com/characters/mark/model/');
   });
 
   it('can use same-origin prepared folders without R2', async () => {
