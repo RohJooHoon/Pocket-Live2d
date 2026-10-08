@@ -34,6 +34,8 @@ const expressionButton = element<HTMLButtonElement>('expression-button');
 const consentDialog = element<HTMLDialogElement>('consent-dialog');
 const infoDialog = element<HTMLDialogElement>('info-dialog');
 const documentDialog = element<HTMLDialogElement>('document-dialog');
+const portraitDialog = element<HTMLDialogElement>('portrait-dialog');
+const mobileLandscape = window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: landscape)');
 
 document.title = `${character.name} · ${SERVICE_NAME}`;
 element('character-name').textContent = character.name;
@@ -116,6 +118,7 @@ function startCharacter(): void {
   wirePointer();
   wireButtons();
   wireVisibility();
+  syncRuntimeState();
 }
 
 function canvasPoint(event: PointerEvent): { x: number; y: number } {
@@ -123,10 +126,11 @@ function canvasPoint(event: PointerEvent): { x: number; y: number } {
   return { x: event.clientX - rect.left, y: event.clientY - rect.top };
 }
 
-function wirePointer(): void {
-  const taps = new TapTracker();
+const taps = new TapTracker();
 
+function wirePointer(): void {
   canvas.addEventListener('pointerdown', (event) => {
+    if (isRuntimePaused()) return;
     if (!taps.down(event.pointerId, event.clientX, event.clientY, event.timeStamp)) return;
     canvas.setPointerCapture(event.pointerId);
     const point = canvasPoint(event);
@@ -160,6 +164,7 @@ const tiltFilter = new OrientationFilter();
 let tiltTarget: OrientationState = { ...NEUTRAL_ORIENTATION };
 let tiltFrame = 0;
 let lastTiltTime = 0;
+let motionEnabled = false;
 
 const sensors = new MotionSensors({
   onTilt: (state) => {
@@ -178,18 +183,36 @@ function tiltLoop(time: number): void {
 }
 
 function setMotionEnabled(enabled: boolean): void {
+  motionEnabled = enabled;
   motionToggle.setAttribute('aria-pressed', String(enabled));
   motionToggle.textContent = enabled ? '기울이기·흔들기 끄기' : '기울이기·흔들기 켜기';
-  if (enabled) {
+  syncRuntimeState();
+}
+
+function isRuntimePaused(): boolean {
+  return document.visibilityState === 'hidden' || mobileLandscape.matches;
+}
+
+function syncRuntimeState(): void {
+  const paused = isRuntimePaused();
+  renderer?.setPaused(paused);
+  cancelAnimationFrame(tiltFrame);
+  if (paused) {
+    const pointerId = taps.activePointerId;
+    if (pointerId != null) {
+      taps.cancel(pointerId);
+      if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+    }
+    renderer?.releaseLook();
+  }
+  if (motionEnabled && !paused) {
     tiltTarget = { ...NEUTRAL_ORIENTATION };
     tiltFilter.reset();
     sensors.start();
     lastTiltTime = 0;
-    cancelAnimationFrame(tiltFrame);
     tiltFrame = requestAnimationFrame(tiltLoop);
   } else {
     sensors.stop();
-    cancelAnimationFrame(tiltFrame);
     tiltFilter.reset();
     renderer?.setTiltOffsets(null);
   }
@@ -197,7 +220,7 @@ function setMotionEnabled(enabled: boolean): void {
 
 function wireButtons(): void {
   motionToggle.addEventListener('click', async () => {
-    if (sensors.isRunning) {
+    if (motionEnabled) {
       setMotionEnabled(false);
       return;
     }
@@ -219,18 +242,27 @@ function wireButtons(): void {
 }
 
 function wireVisibility(): void {
-  document.addEventListener('visibilitychange', () => {
-    const hidden = document.visibilityState === 'hidden';
-    renderer?.setPaused(hidden);
-    if (!sensors.isRunning) return;
-    if (hidden) {
-      cancelAnimationFrame(tiltFrame);
-    } else {
-      sensors.recalibrate();
-      lastTiltTime = 0;
-      tiltFrame = requestAnimationFrame(tiltLoop);
-    }
-  });
+  document.addEventListener('visibilitychange', syncRuntimeState);
+}
+
+// Ordinary browser tabs cannot reliably lock orientation (notably on iPhone).
+// The non-dismissible modal prevents landscape use without losing open sheets.
+function refreshPortraitGate(): void {
+  if (mobileLandscape.matches) {
+    if (!portraitDialog.open) portraitDialog.showModal();
+  } else if (portraitDialog.open) {
+    portraitDialog.close();
+  }
+  syncRuntimeState();
+}
+
+function tryPortraitLock(): void {
+  if (!window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const orientation = screen.orientation as ScreenOrientation & {
+    lock?: (orientation: 'portrait') => Promise<void>;
+  };
+  // Unsupported and fullscreen-only browsers use the portrait gate instead.
+  if (typeof orientation?.lock === 'function') void orientation.lock('portrait').catch(() => {});
 }
 
 // --- Consent gate -----------------------------------------------------------
@@ -250,3 +282,9 @@ if (hasAcceptedCurrentTerms(store)) {
   showStatus();
   consentDialog.showModal();
 }
+
+portraitDialog.addEventListener('cancel', (event) => event.preventDefault());
+mobileLandscape.addEventListener('change', refreshPortraitGate);
+document.addEventListener('fullscreenchange', tryPortraitLock);
+refreshPortraitGate();
+tryPortraitLock();

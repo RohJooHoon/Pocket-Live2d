@@ -222,3 +222,45 @@ dialog.document header h2 {
 #document-body p {
   margin: 4px 0;
 }
+
+/* A modal in the top layer also covers open consent and legal sheets. */
+dialog.portrait-gate {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  border: 0;
+  color: var(--text);
+  background: linear-gradient(var(--bg-top), var(--bg-bottom));
+}
+
+dialog.portrait-gate[open] {
+  display: grid;
+  place-items: center;
+}
+
+.portrait-message {
+  text-align: center;
+}
+
+.portrait-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--accent);
+}
+
+.portrait-message h2 {
+  margin: 12px 0 8px;
+  font-size: 1.2rem;
+}
+
+.portrait-message p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
