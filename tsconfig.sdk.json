@@ -9,8 +9,8 @@
     "isolatedModules": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@cubism-adapter": ["src/live2d/cubism/adapter.ts"],
-      "@framework/*": ["vendor/cubism/Framework/src/*"]
+      "@cubism-adapter": ["./src/live2d/cubism/adapter.ts"],
+      "@framework/*": ["./vendor/cubism/Framework/src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "vendor/cubism/Core/live2dcubismcore.d.ts"],
