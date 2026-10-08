@@ -82,6 +82,8 @@ npx wrangler@4 r2 bucket cors set pocket-live2d --file /path/to/r2-cors.json
 
 ## 4. 공개 파일 검증과 Pages 배포
 
+내 PC에서 최신 코드 받기부터 SDK·로그인·배포까지의 순서는 [로컬 배포 가이드](LOCAL_DEPLOY.md)에 있습니다.
+
 ```bash
 npm run verify:models -- --origin https://pocket-live2d.pages.dev
 ```

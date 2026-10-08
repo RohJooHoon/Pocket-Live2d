@@ -1,7 +1,7 @@
 // Build and deploy one shared Pages site at /<character-id>. Model assets live in R2.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { readSiteConfig, root } from './site-config.mjs';
 
 function fail(message) { console.error(message); process.exit(1); }
@@ -30,12 +30,24 @@ const sdkReady = [
 ].every((file) => existsSync(resolve(root, file)));
 if (!sdkReady && !dryRun) fail('Prepare Cubism SDK for Web 5-r.5 before deploying: python3 tool/prepare_cubism_web.py <SDK path>');
 function run(command, commandArgs, capture = false) {
+  // npm scripts expose their JS entry point. Invoke it through Node on Windows
+  // so local checkout paths with spaces do not go through cmd.exe quoting.
+  if (process.platform === 'win32' && process.env.npm_execpath) {
+    const entry = command === 'npm' ? process.env.npm_execpath
+      : command === 'npx' ? resolve(dirname(process.env.npm_execpath), 'npx-cli.js') : null;
+    if (entry && existsSync(entry)) {
+      commandArgs = [entry, ...commandArgs];
+      command = process.execPath;
+    }
+  }
   const result = spawnSync(command, commandArgs, { cwd: root, encoding: 'utf8',
-    stdio: capture ? 'pipe' : 'inherit', shell: process.platform === 'win32',
+    stdio: capture ? 'pipe' : 'inherit',
+    shell: process.platform === 'win32' && command !== process.execPath,
     env: { ...process.env, ...env, CHARACTER: characterId } });
   if (capture) { process.stdout.write(result.stdout ?? ''); process.stderr.write(result.stderr ?? ''); }
   return result;
 }
+if (!dryRun && run('npm', ['run', 'typecheck:sdk']).status !== 0) fail('SDK renderer typecheck failed; no deployment was performed.');
 if (run('npm', ['run', 'build']).status !== 0) fail('Build failed.');
 const out = resolve(root, 'dist', characterId);
 if (['model', 'models', 'characters'].some((name) => existsSync(resolve(out, name)))) fail('R2 build unexpectedly contains local models; refusing to deploy.');

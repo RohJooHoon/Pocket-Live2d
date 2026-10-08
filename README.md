@@ -73,21 +73,23 @@ MediaPipe의 성능·사용 지표는 Google의 [개인정보 안내](https://de
 손을 떼거나 16px를 넘게 이동하거나 다른 손가락을 대면 복귀 타이머가 취소됩니다. 탭 이탈·화면 회전·포인터 캡처 손실도 타이머를 취소합니다.
 PC에서는 **Escape**로도 UI를 다시 표시할 수 있습니다. 모바일 가로의 세로 안내는 유지하며, 숨김 상태는 새로고침 후 유지하지 않습니다.
 
-### 인터넷에 올리기 (Cloudflare Pages)
+### 내 PC에서 Cloudflare Pages 배포하기
 
-SDK가 준비된 PC에서 빌드해 Cloudflare Pages에 직접 업로드합니다. 주소는 `https://<프로젝트>.pages.dev`로 바로 https입니다.
+Node.js 24 LTS와 Python 3.9 이상을 준비하고, 최신 코드와 공식 **Cubism SDK for Web 5-r.5**를 로컬에 준비합니다. 처음 설정부터 실행할 명령과 Windows/macOS SDK 경로 예시는 [로컬 배포 가이드](docs/LOCAL_DEPLOY.md)에 있습니다.
 
 ```bash
-npx wrangler login         # 처음 한 번 (Node.js 22 이상 필요)
-npm run deploy -- mark     # 빌드 → Core 포함 확인 → 업로드
+npm ci
+npm run deploy:setup       # .env.local 생성; 기존 파일 보존
+# 공식 Web SDK를 받아 tool/prepare_cubism_web.py로 준비
+npm run deploy:login       # 브라우저에서 Cloudflare 로그인
+npm run deploy:check       # SDK 타입 + 실제 R2 파일 검사
+npm run deploy:dry-run     # 빌드와 배포 계획 확인
+npm run deploy:pages       # pocket-live2d 프로젝트에 실제 업로드
 ```
 
-기본 사이트의 Cloudflare Pages 프로젝트는 `pocket-live2d`, 배포 주소는 `https://pocket-live2d.pages.dev`입니다.
-`characters/mark/character.json`의 `pagesProject`로 지정하며, 다른 캐릭터는 별도 설정이 없으면 `pocket-live2d-<id>`를 사용합니다.
-이 설정으로 배포하면 새 프로젝트를 만들거나 같은 이름의 기존 프로젝트를 갱신합니다. 이전 프로젝트의 이름이나 도메인을 자동으로 옮기지는 않습니다.
+배포 주소는 `https://pocket-live2d.pages.dev/mark`입니다. 모델은 이미 R2의 `pocket-live2d` 버킷에 업로드되어 있으므로 로컬에서 다시 업로드할 필요는 없습니다. `deploy:setup`의 기본 공개 주소는 `https://pub-108d29ef05ad474597a55db4df55a8bd.r2.dev`입니다.
 
-Cloudflare의 GitHub 연동 자동 빌드는 쓰지 않습니다. Cloudflare 서버에는 SDK가 없고, SDK를 저장소에 넣을 수도 없기 때문입니다.
-커스텀 도메인 연결과 QR 코드는 [웹 테스트·배포 가이드 7장](docs/WEB_TESTING.md#7-배포와-qr-코드-cloudflare-pages)을 보세요.
+GitHub에는 SDK를 포함하지 않으므로 SDK가 준비된 PC에서 직접 업로드합니다. 사용자 지정 도메인과 R2 CORS는 [R2 설정 가이드](docs/R2_SETUP.md)를 보세요.
 
 ## R2에 모델만 추가하기
 
