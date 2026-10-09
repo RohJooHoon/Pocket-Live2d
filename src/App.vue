@@ -77,7 +77,7 @@ onMounted(() => {
 
     <Transition name="restore-hint">
       <p v-if="restoreHintVisible" class="restore-hint" role="status">
-        화면을 8초 동안 누르고 있으면 UI 숨기기가 해제됩니다.
+        화면을 꾹 누르고 있으면 UI 숨기기가 해제됩니다.
       </p>
     </Transition>
 
