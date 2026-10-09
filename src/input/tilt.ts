@@ -3,7 +3,7 @@ import type { OrientationState, ParameterOffsets } from '../types';
 export const NEUTRAL_ORIENTATION: OrientationState = Object.freeze({ x: 0, y: 0, z: 0 });
 
 export interface TiltReading {
-  /** Rotation around the screen normal in degrees (DeviceOrientationEvent.alpha). */
+  /** Heading in degrees (DeviceOrientationEvent.alpha), around the world vertical. */
   alpha: number | null;
   /** Front/back tilt in degrees (DeviceOrientationEvent.beta). */
   beta: number | null;
@@ -19,7 +19,7 @@ const MAX_TWIST_DEGREES = 20;
  * the device had when tracking started, in the current screen orientation.
  */
 export class TiltCalibrator {
-  private baseline: { alpha: number; beta: number; gamma: number } | null = null;
+  private baseline: Quaternion | null = null;
 
   reset(): void {
     this.baseline = null;
@@ -29,24 +29,54 @@ export class TiltCalibrator {
   update(reading: TiltReading, screenAngle: number): OrientationState | null {
     if (reading.beta == null || reading.gamma == null) return null;
     const alpha = reading.alpha ?? 0;
+    if (![alpha, reading.beta, reading.gamma, screenAngle].every(Number.isFinite)) return null;
+    const orientation = deviceQuaternion(alpha, reading.beta, reading.gamma);
 
     if (this.baseline == null) {
-      this.baseline = { alpha, beta: reading.beta, gamma: reading.gamma };
+      this.baseline = orientation;
       return { ...NEUTRAL_ORIENTATION };
     }
 
-    const [screenX, screenY] = rotateToScreen(
-      wrapDegrees(reading.gamma - this.baseline.gamma),
-      wrapDegrees(reading.beta - this.baseline.beta),
-      screenAngle,
-    );
+    // Euler angles can jump by 180 degrees near an upright phone. Compute the
+    // actual rotation in the starting device frame before mapping screen axes.
+    const [beta, gamma, twist] = relativeRotation(this.baseline, orientation);
+    const [screenX, screenY] = rotateToScreen(gamma, beta, screenAngle);
 
     return {
       x: clampUnit(screenX / MAX_TILT_DEGREES),
       y: clampUnit(-screenY / MAX_TILT_DEGREES),
-      z: clampUnit(wrapDegrees(alpha - this.baseline.alpha) / MAX_TWIST_DEGREES),
+      z: clampUnit(twist / MAX_TWIST_DEGREES),
     };
   }
+}
+
+type Quaternion = [number, number, number, number]; // x, y, z, w
+
+function multiply(a: Quaternion, b: Quaternion): Quaternion {
+  const [x, y, z, w] = a, [bx, by, bz, bw] = b;
+  return [w * bx + x * bw + y * bz - z * by,
+    w * by - x * bz + y * bw + z * bx,
+    w * bz + x * by - y * bx + z * bw,
+    w * bw - x * bx - y * by - z * bz];
+}
+
+/** DeviceOrientation uses the intrinsic Z(alpha) X(beta) Y(gamma) order. */
+function deviceQuaternion(alpha: number, beta: number, gamma: number): Quaternion {
+  const [a, b, g] = [alpha, beta, gamma].map((value) => value * Math.PI / 360);
+  return multiply(multiply([0, 0, Math.sin(a), Math.cos(a)],
+    [Math.sin(b), 0, 0, Math.cos(b)]), [0, Math.sin(g), 0, Math.cos(g)]);
+}
+
+function relativeRotation(baseline: Quaternion, orientation: Quaternion): [number, number, number] {
+  const [bx, by, bz, bw] = baseline;
+  const rotation = multiply([-bx, -by, -bz, bw], orientation);
+  // q and -q represent the same rotation; choose the shortest path.
+  const sign = rotation[3] < 0 ? -1 : 1;
+  const [x, y, z, w] = rotation.map((value) => value * sign);
+  const length = Math.hypot(x, y, z);
+  if (length < 1e-8) return [0, 0, 0];
+  const scale = 2 * Math.atan2(length, w) * 180 / Math.PI / length;
+  return [x * scale, y * scale, z * scale];
 }
 
 /** Maps portrait device axes (gamma, beta) onto the axes of the rotated screen. */

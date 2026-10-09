@@ -22,8 +22,8 @@ import { CubismUpdateScheduler } from '@framework/motion/cubismupdatescheduler';
 
 import type { FaceParameters, ParameterOffsets } from '../../types';
 import { selectTapTarget, type TapTarget } from '../tapTarget';
+import { MotionSequence } from '../motionSequence';
 
-const PRIORITY_NONE = 0;
 const PRIORITY_IDLE = 1;
 const PRIORITY_FORCE = 3;
 
@@ -48,6 +48,10 @@ export class CharacterModel extends CubismUserModel {
   private readonly scheduler = new CubismUpdateScheduler();
   private readonly loadedMotions = new Map<string, ACubismMotion>();
   private readonly loadedExpressions = new Map<string, ACubismMotion>();
+  private readonly automaticMotions = new MotionSequence<ACubismMotion>();
+  private readonly automaticExpressions = new MotionSequence<string>();
+  private automaticExpressionActive = false;
+  private expressionTime = 0;
   private expressionIndex = -1;
   private look: CubismLook | null = null;
   private eyeBlinkIds: CubismIdHandle[] = [];
@@ -144,28 +148,37 @@ export class CharacterModel extends CubismUserModel {
       this.neutralParameters.forEach((value, i) => model.setParameterValueByIndex(i, value));
     }
     this.motionUpdated = false;
+    let motionStarted = false;
     if (this._motionManager.isFinished()) {
-      if (this.automaticMotionEnabled) this.startRandomMotion(this.options.idleMotion, PRIORITY_IDLE);
+      if (this.automaticMotionEnabled) motionStarted = this.startMotion(this.automaticMotions.next(), PRIORITY_IDLE);
     } else {
       this.motionUpdated = this._motionManager.updateMotion(model, deltaSeconds);
     }
+    if (this.automaticMotionEnabled && !this.faceParameters) {
+      this.expressionTime += deltaSeconds;
+      if (motionStarted || this.expressionTime >= 4) {
+        this.expressionTime = 0;
+        const expression = this.loadedExpressions.get(this.automaticExpressions.next() ?? '');
+        if (expression) {
+          this._expressionManager.startMotion(expression, false);
+          this.automaticExpressionActive = true;
+        }
+      }
+    }
     model.saveParameters();
 
-    // Tilt is added after saving so it never accumulates, and before the
+    // Tilt is applied after saving so it never accumulates, and before the
     // scheduler so physics reacts to it. Touch gaze takes priority over tilt.
     const offsets = this.tiltOffsets;
     if (offsets && !this.looking && !this.faceParameters) {
-      model.addParameterValueById(this.ids.angleX, offsets.angleX);
-      model.addParameterValueById(this.ids.angleY, offsets.angleY);
-      model.addParameterValueById(this.ids.angleZ, offsets.angleZ);
-      model.addParameterValueById(this.ids.eyeBallX, offsets.eyeBallX);
-      model.addParameterValueById(this.ids.eyeBallY, offsets.eyeBallY);
-      model.addParameterValueById(this.ids.bodyAngleX, offsets.bodyAngleX);
+      this.applyTiltPose(offsets);
     }
 
     if (this.faceParameters && !this.looking) this.applyFacePose(this.faceParameters);
 
     this.scheduler.onLateUpdate(model, deltaSeconds);
+    // Sensor-controlled pose wins over automatic sway, expressions and physics.
+    if (offsets && !this.looking && !this.faceParameters) this.applyTiltPose(offsets);
     // Camera expressions take priority over automatic blinking and expressions.
     // Values are applied after saveParameters, so they never persist after stop.
     const face = this.faceParameters;
@@ -179,6 +192,16 @@ export class CharacterModel extends CubismUserModel {
       model.setParameterValueById(this.ids.browRY, face.browRY);
     }
     model.update();
+  }
+
+  private applyTiltPose(offsets: ParameterOffsets): void {
+    const model = this.getModel();
+    model.setParameterValueById(this.ids.angleX, offsets.angleX);
+    model.setParameterValueById(this.ids.angleY, offsets.angleY);
+    model.setParameterValueById(this.ids.angleZ, offsets.angleZ);
+    model.setParameterValueById(this.ids.eyeBallX, offsets.eyeBallX);
+    model.setParameterValueById(this.ids.eyeBallY, offsets.eyeBallY);
+    model.setParameterValueById(this.ids.bodyAngleX, offsets.bodyAngleX);
   }
 
   private applyFacePose(face: FaceParameters): void {
@@ -210,7 +233,12 @@ export class CharacterModel extends CubismUserModel {
   setAutomaticMotionEnabled(enabled: boolean): void {
     if (this.automaticMotionEnabled === enabled) return;
     this.automaticMotionEnabled = enabled;
-    if (!enabled) this._motionManager.stopAllMotions();
+    if (!enabled) {
+      this._motionManager.stopAllMotions();
+      if (this.automaticExpressionActive) this._expressionManager.stopAllMotions();
+      this.automaticExpressionActive = false;
+    }
+    this.expressionTime = 0;
     if (this._breath) this.configureBreathing();
   }
 
@@ -269,6 +297,7 @@ export class CharacterModel extends CubismUserModel {
   }
 
   cycleExpression(): string | null {
+    this.automaticExpressionActive = false;
     const names = [...this.loadedExpressions.keys()];
     if (!this.ready || names.length === 0) return null;
     this.expressionIndex += 1;
@@ -298,16 +327,18 @@ export class CharacterModel extends CubismUserModel {
     const count = this.setting?.getMotionCount(group) ?? 0;
     if (count === 0) return;
     const motion = this.loadedMotions.get(`${group}_${Math.floor(Math.random() * count)}`);
+    this.startMotion(motion, priority);
+  }
+
+  private startMotion(motion: ACubismMotion | null | undefined, priority: number): boolean {
+    if (!motion) return false;
     if (priority === PRIORITY_FORCE) {
       this._motionManager.setReservePriority(priority);
     } else if (!this._motionManager.reserveMotion(priority)) {
-      return;
-    }
-    if (!motion) {
-      this._motionManager.setReservePriority(PRIORITY_NONE);
-      return;
+      return false;
     }
     this._motionManager.startMotionPriority(motion, false, priority);
+    return true;
   }
 
   private async loadExpressions(setting: ICubismModelSetting): Promise<void> {
@@ -323,6 +354,7 @@ export class CharacterModel extends CubismUserModel {
       const expression = this.loadExpression(buffer, buffer.byteLength, name);
       if (expression) this.loadedExpressions.set(name, expression);
     });
+    this.automaticExpressions.reset(this.loadedExpressions.keys());
     if (this._expressionManager) {
       this.scheduler.addUpdatableList(new CubismExpressionUpdater(this._expressionManager));
     }
@@ -345,10 +377,16 @@ export class CharacterModel extends CubismUserModel {
   }
 
   private setupEffects(setting: ICubismModelSetting): void {
-    if (setting.getEyeBlinkParameterCount() > 0) {
+    const fallbackBlink = setting.getEyeBlinkParameterCount() === 0;
+    const model = this.getModel();
+    const hasParameter = (id: CubismIdHandle): boolean =>
+      Array.from({ length: model.getParameterCount() }, (_, i) => model.getParameterId(i)).includes(id);
+    const fallbackEyeIds = [this.ids.eyeLOpen, this.ids.eyeROpen].filter(hasParameter);
+    if (!fallbackBlink || fallbackEyeIds.length > 0) {
       this._eyeBlink = CubismEyeBlink.create(setting);
+      if (fallbackBlink) this._eyeBlink.setParameterIds(fallbackEyeIds);
       this.scheduler.addUpdatableList(
-        new CubismEyeBlinkUpdater(() => this.motionUpdated, this._eyeBlink),
+        new CubismEyeBlinkUpdater(() => this.motionUpdated || (fallbackBlink && !this.automaticMotionEnabled), this._eyeBlink),
       );
     }
 
@@ -382,13 +420,25 @@ export class CharacterModel extends CubismUserModel {
       new BreathParameterData(this.ids.angleZ, 0.0, 10.0, 5.5345, 0.5),
       new BreathParameterData(this.ids.bodyAngleX, 0.0, 4.0, 15.5345, 0.5),
     ] : [];
+    // Models with no authored motions still use their standard eyes, brows and
+    // mouth. Camera parameters override these; switching auto off removes them.
+    const expressions = this.automaticMotionEnabled && this.loadedMotions.size === 0 ? [
+      new BreathParameterData(this.ids.eyeBallX, 0, 0.55, 7.4, 1),
+      new BreathParameterData(this.ids.eyeBallY, 0, 0.3, 9.1, 1),
+      new BreathParameterData(this.ids.browLY, 0, 0.3, 8.3, 1),
+      new BreathParameterData(this.ids.browRY, 0, 0.3, 8.3, 1),
+      new BreathParameterData(this.ids.mouthForm, 0, 0.6, 11.2, 1),
+      new BreathParameterData(this.ids.mouthOpen, 0.15, 0.15, 6.2, 1),
+    ] : [];
     this._breath.setParameters([
       ...sway,
+      ...expressions,
       new BreathParameterData(this.ids.breath, 0.5, 0.5, 3.2345, 1),
     ]);
   }
 
   private async loadMotions(setting: ICubismModelSetting): Promise<void> {
+    const uniqueMotions = new Map<string, ACubismMotion>();
     const jobs: Promise<void>[] = [];
     for (let g = 0; g < setting.getMotionGroupCount(); g += 1) {
       const group = setting.getMotionGroupName(g);
@@ -408,14 +458,19 @@ export class CharacterModel extends CubismUserModel {
                 this._motionConsistency,
               );
               if (!motion) return;
+              // Finish each clip once so every motion can take its turn.
+              motion.setLoop(false);
               motion.setEffectIds(this.eyeBlinkIds, this.lipSyncIds);
               this.loadedMotions.set(`${group}_${i}`, motion);
+              uniqueMotions.set(setting.getMotionFileName(group, i), motion);
             },
           ),
         );
       }
     }
     await Promise.all(jobs);
+    this.automaticMotions.reset(uniqueMotions.values());
+    this.configureBreathing();
   }
 
   private async loadTextures(setting: ICubismModelSetting): Promise<void> {

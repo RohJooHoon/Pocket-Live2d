@@ -41,6 +41,56 @@ describe('TiltCalibrator', () => {
     calibrator.reset();
     expect(calibrator.update({ alpha: 0, beta: 0, gamma: 20 }, 0)).toEqual({ x: 0, y: 0, z: 0 });
   });
+
+  it('keeps equivalent Euler readings neutral when the phone is upright', () => {
+    const calibrator = new TiltCalibrator();
+    calibrator.update({ alpha: 0, beta: 90, gamma: 0 }, 0);
+    const reading = calibrator.update({ alpha: 70, beta: 90, gamma: -70 }, 0)!;
+    expect(reading.x).toBeCloseTo(0);
+    expect(reading.y).toBeCloseTo(0);
+    expect(reading.z).toBeCloseTo(0);
+  });
+
+  it('does not reverse left/right at the gamma boundary while tilted down', () => {
+    const calibrator = new TiltCalibrator();
+    calibrator.update({ alpha: 0, beta: 80, gamma: 89 }, 0);
+    // This second representation is Rz(0) Rx(80) Ry(91), constrained to gamma ±90.
+    const reading = calibrator.update({ alpha: 180, beta: 100, gamma: -89 }, 0)!;
+    expect(reading.x).toBeCloseTo(2 / 30);
+    expect(reading.y).toBeCloseTo(0);
+    expect(reading.z).toBeCloseTo(0);
+  });
+
+  it('maps upright left/right turning to horizontal movement rather than compass twist', () => {
+    const calibrator = new TiltCalibrator();
+    calibrator.update({ alpha: 0, beta: 90, gamma: 0 }, 0);
+    const right = calibrator.update({ alpha: 15, beta: 90, gamma: 0 }, 0)!;
+    const left = calibrator.update({ alpha: -15, beta: 90, gamma: 0 }, 0)!;
+    expect(right.x).toBeCloseTo(0.5);
+    expect(left.x).toBeCloseTo(-0.5);
+    expect(right.y).toBeCloseTo(0);
+    expect(right.z).toBeCloseTo(0);
+  });
+
+  it.each([30, 80, 100, 140])('keeps downward left/right directions stable from beta %s', (beta) => {
+    const calibrator = new TiltCalibrator();
+    calibrator.update({ alpha: 25, beta, gamma: 0 }, 0);
+    for (const gamma of [-15, 15]) {
+      const reading = calibrator.update({ alpha: 25, beta, gamma }, 0)!;
+      expect(reading.x).toBeCloseTo(gamma / 30);
+      expect(reading.y).toBeCloseTo(0);
+      expect(reading.z).toBeCloseTo(0);
+    }
+    const down = calibrator.update({ alpha: 25, beta: beta + 15, gamma: 0 }, 0)!;
+    expect(down.y).toBeCloseTo(-0.5);
+  });
+
+  it('rejects non-finite sensor readings without poisoning calibration', () => {
+    const calibrator = new TiltCalibrator();
+    expect(calibrator.update({ alpha: 0, beta: NaN, gamma: 0 }, 0)).toBeNull();
+    expect(calibrator.update({ alpha: Infinity, beta: 0, gamma: 0 }, 0)).toBeNull();
+    expect(calibrator.update({ alpha: 0, beta: 40, gamma: 0 }, 0)).toEqual({ x: 0, y: 0, z: 0 });
+  });
 });
 
 describe('rotateToScreen', () => {
