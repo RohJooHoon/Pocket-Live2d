@@ -14,6 +14,17 @@ function angleDifference(value: number, baseline: number): number {
   return ((value - baseline + 540) % 360) - 180;
 }
 
+// Neutral scores contain noise, and deliberate gestures often stop short of 1.
+const EXPRESSION_RANGES = {
+  blink: { rest: 0.1, full: 0.6 },
+  jaw: { rest: 0.05, full: 0.65 },
+  round: { rest: 0.1, full: 0.65 },
+};
+
+function expressionStrength(value: number, range: { rest: number; full: number }): number {
+  return clamp((value - range.rest) / (range.full - range.rest), 0, 1);
+}
+
 /** Calibrates the first visible head pose; expressions remain absolute. */
 export class FaceMapper {
   private baseline: { yaw: number; pitch: number; roll: number } | null = null;
@@ -39,19 +50,25 @@ export class FaceMapper {
     const angleX = clamp(-angleDifference(pose.yaw, this.baseline.yaw), -30, 30);
     const eyeBallX = clamp((score('eyeLookOutLeft') - score('eyeLookInLeft') +
       score('eyeLookInRight') - score('eyeLookOutRight')) / 2, -1, 1);
+    const funnel = expressionStrength(score('mouthFunnel'), EXPRESSION_RANGES.round);
+    const round = Math.max(funnel, expressionStrength(score('mouthPucker'), EXPRESSION_RANGES.round));
+    const smile = (score('mouthSmileLeft') + score('mouthSmileRight') -
+      score('mouthFrownLeft') - score('mouthFrownRight')) / 2;
     return {
       angleX,
-      angleY: clamp(angleDifference(pose.pitch, this.baseline.pitch), -30, 30),
+      // MediaPipe's pitch direction is opposite to Cubism ParamAngleY.
+      angleY: clamp(-angleDifference(pose.pitch, this.baseline.pitch), -30, 30),
       angleZ: clamp(-angleDifference(pose.roll, this.baseline.roll), -30, 30),
       bodyAngleX: angleX / 3,
       eyeBallX,
       eyeBallY: (score('eyeLookUpLeft') + score('eyeLookUpRight') -
         score('eyeLookDownLeft') - score('eyeLookDownRight')) / 2,
-      eyeLOpen: 1 - score('eyeBlinkLeft'),
-      eyeROpen: 1 - score('eyeBlinkRight'),
-      mouthOpen: clamp(score('jawOpen') * 1.5, 0, 1),
-      mouthForm: clamp((score('mouthSmileLeft') + score('mouthSmileRight') -
-        score('mouthFrownLeft') - score('mouthFrownRight')) / 2, -1, 1),
+      eyeLOpen: 1 - expressionStrength(score('eyeBlinkLeft'), EXPRESSION_RANGES.blink),
+      eyeROpen: 1 - expressionStrength(score('eyeBlinkRight'), EXPRESSION_RANGES.blink),
+      // Funnel ('O') opens the lips even when the jaw barely moves. Pucker alone
+      // can keep them closed ('U'); both drive the negative, rounded mouth form.
+      mouthOpen: Math.max(expressionStrength(score('jawOpen'), EXPRESSION_RANGES.jaw), funnel * 0.65),
+      mouthForm: clamp(smile * (1 - round) - round, -1, 1),
       browLY: clamp(score('browInnerUp') + score('browOuterUpLeft') - score('browDownLeft'), -1, 1),
       browRY: clamp(score('browInnerUp') + score('browOuterUpRight') - score('browDownRight'), -1, 1),
     };
@@ -66,9 +83,14 @@ export class FaceSmoother {
 
   update(target: FaceParameters, deltaSeconds: number): FaceParameters {
     if (!this.current) this.current = { ...target };
-    const weight = 1 - Math.exp(-Math.max(0, deltaSeconds) / 0.06);
     for (const key of Object.keys(target) as (keyof FaceParameters)[]) {
+      const eye = key === 'eyeLOpen' || key === 'eyeROpen';
+      // A blink must close during its brief detection window, not lag behind
+      // the head smoothing. Reopening remains smooth and independent per eye.
+      const responseSeconds = eye ? (target[key] < this.current[key] ? 0.02 : 0.04) : 0.06;
+      const weight = 1 - Math.exp(-Math.max(0, deltaSeconds) / responseSeconds);
       this.current[key] += (target[key] - this.current[key]) * weight;
+      if (eye && target[key] === 0 && this.current[key] < 0.05) this.current[key] = 0;
     }
     return { ...this.current };
   }
