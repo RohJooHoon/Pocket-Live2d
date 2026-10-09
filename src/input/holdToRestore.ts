@@ -1,4 +1,4 @@
-const HOLD_MS = 10000;
+const HOLD_MS = 8000;
 const MAX_MOVE_PX = 16;
 
 /** A continuous, stationary press restores the UI. Release or interruption cancels it. */

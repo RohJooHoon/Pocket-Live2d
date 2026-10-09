@@ -124,11 +124,11 @@ describe('character stage hidden UI', () => {
     expect(canvas.hasPointerCapture(1)).toBe(false);
   });
 
-  it('restores UI at ten seconds and releases capture without a character action on release', async () => {
+  it('restores UI at eight seconds and releases capture without a character action on release', async () => {
     const { stage, renderer, canvas, event } = await fixture();
     stage.setUiHidden(true);
     stage.pointer.onPointerDown(event());
-    vi.advanceTimersByTime(9999);
+    vi.advanceTimersByTime(7999);
     expect(stage.uiHidden.value).toBe(true);
     vi.advanceTimersByTime(1);
     expect(stage.uiHidden.value).toBe(false);
@@ -140,11 +140,11 @@ describe('character stage hidden UI', () => {
   });
 
   it.each(['release', 'drag', 'cancel', 'lost capture', 'second finger', 'blur'])(
-    'cancels the ten-second hold on %s', async (interruption) => {
+    'cancels the eight-second hold on %s', async (interruption) => {
       const { stage, event } = await fixture();
       stage.setUiHidden(true);
       stage.pointer.onPointerDown(event());
-      vi.advanceTimersByTime(9000);
+      vi.advanceTimersByTime(7000);
       switch (interruption) {
         case 'release': stage.pointer.onPointerUp(event()); break;
         case 'drag': stage.pointer.onPointerMove(event({ clientX: 130 })); break;
@@ -153,7 +153,7 @@ describe('character stage hidden UI', () => {
         case 'second finger': stage.pointer.onPointerDown(event({ pointerId: 2, isPrimary: false })); break;
         case 'blur': window.dispatchEvent(new Event('blur')); break;
       }
-      vi.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(8000);
       expect(stage.uiHidden.value).toBe(true);
     },
   );
