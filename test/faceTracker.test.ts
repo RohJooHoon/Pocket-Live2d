@@ -15,7 +15,8 @@ function stream() {
 
 function fixture() {
   const cameraStream = stream();
-  const video = { srcObject: null, play: vi.fn(async () => {}), pause: vi.fn(), readyState: 2, currentTime: 0 };
+  const video = { srcObject: null, play: vi.fn(async () => {}), pause: vi.fn(), readyState: 2, currentTime: 0,
+    videoWidth: 640, videoHeight: 480 };
   const worker = {
     onmessage: null as ((event: MessageEvent<FaceWorkerReply>) => void) | null,
     onerror: null as (() => void) | null,
@@ -129,6 +130,36 @@ describe('camera lifecycle', () => {
     f.worker.emit({ type: 'result', observation: null, landmarks: [] });
     expect(f.onParameters).toHaveBeenLastCalledWith(null);
     expect(f.onLandmarks).toHaveBeenLastCalledWith([]);
+    f.tracker.stop();
+  });
+
+  it('uses worker eyelid landmarks to send a complete independent wink to the renderer', async () => {
+    const f = fixture();
+    await started(f);
+    const landmarks = (left: number) => {
+      const points = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+      for (const [indices, aperture] of [
+        [[362, 263, 385, 380, 387, 373], left], [[33, 133, 160, 144, 158, 153], 0.3],
+      ] as const) {
+        const height = aperture * 0.1 * 4 / 3;
+        points[indices[0]].x = 0.4;
+        points[indices[1]].x = 0.5;
+        for (const index of [indices[2], indices[4]]) points[index].y -= height / 2;
+        for (const index of [indices[3], indices[5]]) points[index].y += height / 2;
+      }
+      return points;
+    };
+    const matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -50, 1];
+    f.frame(1000);
+    await flush();
+    f.worker.emit({ type: 'result', landmarks: landmarks(0.3), observation: { matrix, scores: {} } });
+    f.video.currentTime = 1;
+    f.frame(1100);
+    await flush();
+    f.worker.emit({ type: 'result', landmarks: landmarks(0.08), observation: {
+      matrix, scores: { eyeBlinkLeft: 0.4, eyeBlinkRight: 0.2 },
+    } });
+    expect(f.onParameters).toHaveBeenLastCalledWith(expect.objectContaining({ eyeLOpen: 0, eyeROpen: 1 }));
     f.tracker.stop();
   });
 

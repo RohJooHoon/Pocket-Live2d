@@ -172,7 +172,10 @@ export class FaceTracker {
 
   private applyResult(session: Session, reply: Extract<FaceWorkerReply, { type: 'result' }>): void {
     this.options.onLandmarks(reply.landmarks);
-    const parameters = reply.observation ? this.mapper.map(reply.observation) : null;
+    const parameters = reply.observation ? this.mapper.map({
+      ...reply.observation, landmarks: reply.landmarks,
+      aspectRatio: this.options.video.videoWidth / this.options.video.videoHeight,
+    }) : null;
     const now = session.lastFrame;
     if (parameters) {
       const elapsed = session.lastParameterTime ? (now - session.lastParameterTime) / 1000 : 0;

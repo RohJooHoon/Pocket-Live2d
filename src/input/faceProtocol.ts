@@ -1,6 +1,6 @@
 import type { FaceObservation } from './faceMapping';
 
-export interface FacePoint { x: number; y: number }
+export interface FacePoint { x: number; y: number; z?: number }
 
 export type FaceWorkerRequest =
   | { type: 'init'; runtimeUrl: string; wasmRoot: string; modelUrl: string }
