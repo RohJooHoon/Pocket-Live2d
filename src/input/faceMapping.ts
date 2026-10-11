@@ -52,10 +52,12 @@ function eyeAperture(observation: FaceObservation, side: keyof typeof EYE_POINTS
 /** Calibrates the starting head pose and each open eye; blendshape scores remain absolute. */
 export class FaceMapper {
   private baseline: { yaw: number; pitch: number; roll: number } | null = null;
+  private previousPose: { yaw: number; pitch: number; roll: number } | null = null;
   private openEyes: { left: number | null; right: number | null } = { left: null, right: null };
 
   reset(): void {
     this.baseline = null;
+    this.previousPose = null;
     this.openEyes = { left: null, right: null };
   }
 
@@ -69,6 +71,18 @@ export class FaceMapper {
       roll: Math.atan2(m[1], m[0]) * degrees,
     };
     this.baseline ??= pose;
+    const movement = this.previousPose ? Math.hypot(
+      angleDifference(pose.yaw, this.previousPose.yaw),
+      angleDifference(pose.pitch, this.previousPose.pitch),
+      angleDifference(pose.roll, this.previousPose.roll),
+    ) : 0;
+    this.previousPose = pose;
+    // Side views and fast motion distort eyelid landmarks and blink scores.
+    // Use absolute camera-facing angles, not the calibrated/clamped head output.
+    const eyeConfidence = Math.min(
+      1 - clamp((Math.max(Math.abs(pose.yaw), Math.abs(pose.pitch)) - 20) / 15, 0, 1),
+      1 - clamp((movement - 2) / 4, 0, 1),
+    );
     const score = (name: string): number => {
       const value = scores[name] ?? 0;
       return Number.isFinite(value) ? clamp(value, 0, 1) : 0;
@@ -84,20 +98,29 @@ export class FaceMapper {
       const blink = score(side === 'left' ? 'eyeBlinkLeft' : 'eyeBlinkRight');
       const aperture = eyeAperture(observation, side);
       // Learn each open eye independently; never calibrate from a blink/wink.
-      if (aperture != null && aperture >= 0.12 && blink <= EXPRESSION_RANGES.blink.rest) {
+      if (eyeConfidence === 1 && aperture != null && aperture >= 0.12 && blink <= EXPRESSION_RANGES.blink.rest) {
         const baseline = this.openEyes[side];
         this.openEyes[side] = baseline == null ? aperture : baseline * 0.95 + aperture * 0.05;
       }
       const baseline = this.openEyes[side];
       const relative = aperture != null && baseline != null ? aperture / baseline : null;
-      const closure = relative != null ? clamp((EYELID_RATIOS.closing - relative) /
+      const closure = relative != null && blink >= 0.3 ? eyeConfidence * clamp((EYELID_RATIOS.closing - relative) /
         (EYELID_RATIOS.closing - EYELID_RATIOS.closed), 0, 1) : 0;
-      return { blink, relative, open: 1 - Math.max(expressionStrength(blink, EXPRESSION_RANGES.blink), closure) };
+      const blinkStrength = expressionStrength(blink, {
+        rest: EXPRESSION_RANGES.blink.rest + (1 - eyeConfidence) * 0.55,
+        full: EXPRESSION_RANGES.blink.full + (1 - eyeConfidence) * 0.25,
+      });
+      // Visible open lids contradict a noisy blink score. Closed-looking lids
+      // alone cannot establish a blink: require the independent blink signal.
+      const open = relative != null && relative >= EYELID_RATIOS.open ? 1 :
+        1 - Math.max(blinkStrength, closure);
+      return { blink, relative, open };
     });
     // A geometrically closed eye plus an open opposite eye is a wink. Ignore
     // small sympathetic blink scores in that opposite eye, but keep real blinks.
     for (const [closed, opposite] of [[eyes[0], eyes[1]], [eyes[1], eyes[0]]]) {
-      if (closed.relative != null && closed.relative <= EYELID_RATIOS.closed &&
+      if (eyeConfidence === 1 && closed.blink >= 0.3 &&
+        closed.relative != null && closed.relative <= EYELID_RATIOS.closed &&
         opposite.relative != null && opposite.relative >= EYELID_RATIOS.open && opposite.blink <= 0.25) {
         opposite.open = 1;
       }

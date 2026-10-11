@@ -178,6 +178,65 @@ describe('camera parameter mapping', () => {
     expect(mapper.map(wink)?.eyeLOpen).toBeCloseTo(0.4);
   });
 
+  it('does not close eyes from compressed eyelid landmarks without a blink signal', () => {
+    const mapper = new FaceMapper();
+    mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+    const distorted = mapper.map({ matrix: matrix(), scores: { eyeBlinkLeft: 0.08, eyeBlinkRight: 0.09 },
+      landmarks: eyeLandmarks(0.04, 0.04), aspectRatio: 4 / 3 })!;
+    expect([distorted.eyeLOpen, distorted.eyeROpen]).toEqual([1, 1]);
+  });
+
+  it('rejects false blink scores when the visible eyelids remain open', () => {
+    const mapper = new FaceMapper();
+    mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+    const distorted = mapper.map({ matrix: matrix(10), scores: { eyeBlinkLeft: 0.65, eyeBlinkRight: 0.5 },
+      landmarks: eyeLandmarks(), aspectRatio: 4 / 3 })!;
+    expect([distorted.eyeLOpen, distorted.eyeROpen]).toEqual([1, 1]);
+  });
+
+  it.each([-40, 40])('does not close occluded eyes on repeated side views at yaw %s', (yaw) => {
+    const mapper = new FaceMapper();
+    mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+    for (let i = 0; i < 8; i++) {
+      const turned = mapper.map({ matrix: matrix(yaw), scores: { eyeBlinkLeft: 0.6, eyeBlinkRight: 0.4 },
+        landmarks: eyeLandmarks(0.04, 0.08), aspectRatio: 4 / 3 })!;
+      expect([turned.eyeLOpen, turned.eyeROpen]).toEqual([1, 1]);
+    }
+  });
+
+  it('suppresses motion artifacts during a head shake, then still closes a deliberate wink', () => {
+    const mapper = new FaceMapper();
+    mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+    for (const yaw of [8, -8, 8, -8, 0]) {
+      const shaken = mapper.map({ matrix: matrix(yaw), scores: { eyeBlinkLeft: 0.5, eyeBlinkRight: 0.4 },
+        landmarks: eyeLandmarks(0.04, 0.08), aspectRatio: 4 / 3 })!;
+      expect([shaken.eyeLOpen, shaken.eyeROpen]).toEqual([1, 1]);
+    }
+    const wink = mapper.map({ matrix: matrix(), scores: { eyeBlinkLeft: 0.4, eyeBlinkRight: 0.2 },
+      landmarks: eyeLandmarks(0.04, 0.3), aspectRatio: 4 / 3 })!;
+    expect([wink.eyeLOpen, wink.eyeROpen]).toEqual([0, 1]);
+  });
+
+  it('preserves a strong intentional blink while turning, with or without landmarks', () => {
+    for (const extras of [{}, { landmarks: eyeLandmarks(0.04, 0.04), aspectRatio: 4 / 3 }]) {
+      const mapper = new FaceMapper();
+      mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+      const closed = mapper.map({ matrix: matrix(40), scores: { eyeBlinkLeft: 0.9, eyeBlinkRight: 0.9 }, ...extras })!;
+      expect([closed.eyeLOpen, closed.eyeROpen]).toEqual([0, 0]);
+    }
+  });
+
+  it('does not learn a distorted eye baseline while looking sideways', () => {
+    const mapper = new FaceMapper();
+    mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+    for (let i = 0; i < 30; i++) mapper.map({ matrix: matrix(40), scores: {},
+      landmarks: eyeLandmarks(0.6, 0.6), aspectRatio: 4 / 3 });
+    mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
+    const wink = mapper.map({ matrix: matrix(), scores: { eyeBlinkLeft: 0.4, eyeBlinkRight: 0.2 },
+      landmarks: eyeLandmarks(0.04, 0.3), aspectRatio: 4 / 3 })!;
+    expect([wink.eyeLOpen, wink.eyeROpen]).toEqual([0, 1]);
+  });
+
   it('falls back to blink scores for missing, malformed or collapsed landmarks', () => {
     const mapper = new FaceMapper();
     mapper.map({ matrix: matrix(), scores: {}, landmarks: eyeLandmarks(), aspectRatio: 4 / 3 });
