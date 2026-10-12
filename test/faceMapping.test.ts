@@ -39,7 +39,7 @@ describe('camera parameter mapping', () => {
     const pose = mapper.map({ matrix: matrix(20, 18, -6), scores: {} })!;
     expect(pose.angleX).toBeCloseTo(-15);
     expect(pose.angleY).toBeCloseTo(-10);
-    expect(pose.angleZ).toBeCloseTo(10);
+    expect(pose.angleZ).toBeCloseTo(-10);
     expect(pose.bodyAngleX).toBeCloseTo(-5);
   });
 
@@ -49,7 +49,7 @@ describe('camera parameter mapping', () => {
     const pose = mapper.map({ matrix: matrix(80, 80, -179), scores: {} })!;
     expect(pose.angleX).toBe(-30);
     expect(pose.angleY).toBe(-30);
-    expect(pose.angleZ).toBeCloseTo(-2);
+    expect(pose.angleZ).toBeCloseTo(2);
     mapper.reset();
     expect(mapper.map({ matrix: matrix(50), scores: {} })?.angleX).toBeCloseTo(0);
   });
@@ -85,6 +85,14 @@ describe('camera parameter mapping', () => {
     mapper.map({ matrix: matrix(0, 8), scores: {} });
     expect(mapper.map({ matrix: matrix(0, 28), scores: {} })?.angleY).toBeCloseTo(-20);
     expect(mapper.map({ matrix: matrix(0, -12), scores: {} })?.angleY).toBeCloseTo(20);
+  });
+
+  it('follows both head-tilt directions from an already tilted starting pose', () => {
+    const mapper = new FaceMapper();
+    mapper.map({ matrix: matrix(0, 0, 7), scores: {} });
+    expect(mapper.map({ matrix: matrix(0, 0, 22), scores: {} })?.angleZ).toBeCloseTo(15);
+    expect(mapper.map({ matrix: matrix(0, 0, -8), scores: {} })?.angleZ).toBeCloseTo(-15);
+    expect(mapper.map({ matrix: matrix(0, 0, 7), scores: {} })?.angleZ).toBeCloseTo(0);
   });
 
   it('opens a rounded O mouth from funnel even with little jaw movement', () => {
