@@ -29,7 +29,7 @@ const stage = useCharacterStage(
   { landscape, status },
 );
 const { character, automaticMotionEnabled, motionEnabled, uiHidden, restoreHintVisible, pointer } = stage;
-const { enabled: cameraEnabled, state: cameraState, faceFound, canToggle: cameraCanToggle } = stage.camera;
+const { enabled: cameraEnabled, state: cameraState, faceFound, bodyFound, bodyAvailable, canToggle: cameraCanToggle } = stage.camera;
 const statusMessage = status.message;
 
 const store = browserStore();
@@ -84,7 +84,8 @@ onMounted(() => {
     <TopBar :character-name="character?.name ?? '캐릭터'" @hide-ui="stage.setUiHidden(true)" @open-info="infoOpen = true" />
 
     <video id="camera-video" ref="camera-video" autoplay muted playsinline hidden aria-hidden="true" />
-    <FacePreview ref="face-preview" :visible="cameraEnabled" :state="cameraState" :face-found="faceFound" />
+    <FacePreview ref="face-preview" :visible="cameraEnabled" :state="cameraState" :face-found="faceFound"
+      :body-found="bodyFound" :body-available="bodyAvailable" />
 
     <ControlBar
       :status="statusMessage"

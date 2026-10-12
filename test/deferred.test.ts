@@ -10,6 +10,7 @@ function fakeRenderer(): CharacterRenderer {
     setAutomaticMotionEnabled: vi.fn(),
     setTiltOffsets: vi.fn(),
     setFaceParameters: vi.fn(),
+    setBodyParameters: vi.fn(),
     playMotion: vi.fn(),
     cycleExpression: vi.fn(() => 'happy'),
     setPaused: vi.fn(),
@@ -79,5 +80,16 @@ describe('DeferredRenderer', () => {
     expect(target.setAutomaticMotionEnabled).toHaveBeenLastCalledWith(false);
     deferred.setAutomaticMotionEnabled(true);
     expect(target.setAutomaticMotionEnabled).toHaveBeenLastCalledWith(true);
+  });
+
+  it('forwards body pose and removes a stopped camera pose before lazy loading completes', () => {
+    const deferred = new DeferredRenderer(), body = { bodyAngleX: 3, bodyAngleY: -4, bodyAngleZ: 5 };
+    deferred.setBodyParameters(body);
+    deferred.setBodyParameters(null);
+    const target = fakeRenderer();
+    deferred.attach(target);
+    expect(target.setBodyParameters).toHaveBeenLastCalledWith(null);
+    deferred.setBodyParameters(body);
+    expect(target.setBodyParameters).toHaveBeenLastCalledWith(body);
   });
 });

@@ -17,6 +17,7 @@ const open = defineModel<boolean>('open', { required: true });
       <form method="dialog"><button class="icon-button" aria-label="닫기"><IconClose /></button></form>
     </header>
     <p id="info-credit" class="fine-print">{{ credit }}</p>
+    <p class="fine-print">‘따라하기’는 얼굴과 상체 움직임을 따라 해요. 어깨와 허리가 카메라에 보이면 몸을 기울이거나 숙이는 동작도 반영돼요.</p>
     <p class="fine-print">‘UI 숨기기’를 누르면 캐릭터만 보여요. 켜 둔 얼굴 따라하기는 계속 작동해요. 화면을 꾹 누르고 있으면 UI가 다시 나타나요. 키보드에서는 Escape로 돌아올 수 있어요.</p>
     <p class="fine-print">
       캐릭터 표시에 Live2D Cubism SDK를 사용합니다. Live2D는 Live2D Inc.의 상표이며, 이 페이지는 Live2D Inc.가 만들거나 인증한 것이 아닙니다.

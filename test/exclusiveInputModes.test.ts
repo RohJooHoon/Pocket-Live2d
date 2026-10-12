@@ -63,7 +63,7 @@ describe('exclusive tilt and face tracking modes', () => {
       requestFrame: vi.fn(), cancelFrame: vi.fn(),
     };
     const tracker = new FaceTracker({
-      video: video as unknown as HTMLVideoElement, onParameters: vi.fn(), onLandmarks: vi.fn(),
+      video: video as unknown as HTMLVideoElement, onParameters: vi.fn(), onBodyParameters: vi.fn(), onLandmarks: vi.fn(),
       onStatus: () => { f.state.camera = tracker.isEnabled; expect(f.state.motion && f.state.camera).toBe(false); },
     }, platform);
     let cameraStart!: Promise<void>;

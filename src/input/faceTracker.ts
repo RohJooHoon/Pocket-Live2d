@@ -1,16 +1,18 @@
-import type { FaceParameters } from '../types';
+import type { BodyParameters, FaceParameters } from '../types';
+import { BodyMapper, BodySmoother } from './bodyMapping';
 import { FaceMapper, FaceSmoother } from './faceMapping';
 import type { FacePoint, FaceWorkerReply, FaceWorkerRequest } from './faceProtocol';
 
 export type CameraStatus =
   | { state: 'starting' }
-  | { state: 'running'; faceFound: boolean }
+  | { state: 'running'; faceFound: boolean; bodyFound: boolean; bodyAvailable: boolean }
   | { state: 'stopped' }
   | { state: 'error'; message: string };
 
 export interface FaceTrackerOptions {
   video: HTMLVideoElement;
   onParameters: (parameters: FaceParameters | null) => void;
+  onBodyParameters: (parameters: BodyParameters | null) => void;
   onLandmarks: (points: FacePoint[]) => void;
   onStatus: (status: CameraStatus) => void;
 }
@@ -40,6 +42,11 @@ interface Session {
   lastVideoTime: number;
   lastFaceTime: number;
   lastParameterTime: number;
+  lastBodyTime: number;
+  lastBodyParameterTime: number;
+  bodyFound: boolean;
+  bodyAvailable: boolean;
+  bodyLandmarks: FacePoint[];
 }
 
 const FRAME_INTERVAL_MS = 1000 / 15;
@@ -75,6 +82,8 @@ export class FaceTracker {
   private session: Session | null = null;
   private readonly mapper = new FaceMapper();
   private readonly smoother = new FaceSmoother();
+  private readonly bodyMapper = new BodyMapper();
+  private readonly bodySmoother = new BodySmoother();
 
   constructor(private readonly options: FaceTrackerOptions, private readonly platform = browserPlatform()) {}
 
@@ -93,6 +102,7 @@ export class FaceTracker {
     const session: Session = {
       stream: null, worker: null, frame: 0, busy: false, active: false,
       lastFrame: -Infinity, lastVideoTime: -1, lastFaceTime: 0, lastParameterTime: 0,
+      lastBodyTime: -Infinity, lastBodyParameterTime: -Infinity, bodyFound: false, bodyAvailable: false, bodyLandmarks: [],
     };
     this.session = session;
     this.options.onStatus({ state: 'starting' });
@@ -112,13 +122,18 @@ export class FaceTracker {
       const worker = this.platform.createWorker();
       session.worker = worker;
       const ready = new Promise<boolean>((resolve) => { session.finishReady = resolve; });
-      session.initTimer = setTimeout(() => this.fail(session, '얼굴 추적 준비가 오래 걸려요. 다시 켜 주세요.'), 30000);
+      session.initTimer = setTimeout(() => this.fail(session, '추적 준비가 오래 걸려요. 다시 켜 주세요.'), 60000);
       worker.onmessage = (event: MessageEvent<FaceWorkerReply>) => {
         if (this.session !== session) return;
         const reply = event.data;
         if (reply.type === 'ready') {
+          session.bodyAvailable = reply.bodyAvailable ?? false;
           clearTimeout(session.initTimer);
           session.finishReady?.(true);
+        } else if (reply.type === 'body-error') {
+          console.warn('Body tracking:', reply.message);
+          session.bodyAvailable = false;
+          this.clearBody(session);
         } else if (reply.type === 'error') {
           console.error('Face tracking:', reply.message);
           this.fail(session, '얼굴 추적을 실행하지 못했어요. 다시 켜 주세요.');
@@ -133,11 +148,12 @@ export class FaceTracker {
         type: 'init', runtimeUrl: this.platform.assetUrl('/face/vision_bundle.js'),
         wasmRoot: this.platform.assetUrl('/face/wasm'),
         modelUrl: this.platform.assetUrl('/face/face_landmarker.task'),
+        bodyModelUrl: this.platform.assetUrl('/face/pose_landmarker_lite.task'),
       };
       worker.postMessage(request);
       if (!await ready || this.session !== session) return;
       session.active = true;
-      this.options.onStatus({ state: 'running', faceFound: false });
+      this.options.onStatus({ state: 'running', faceFound: false, bodyFound: false, bodyAvailable: session.bodyAvailable });
       session.frame = this.platform.requestFrame((time) => this.tick(session, time));
     } catch (error) {
       this.fail(session, cameraError(error));
@@ -159,7 +175,10 @@ export class FaceTracker {
     this.options.video.srcObject = null;
     this.mapper.reset();
     this.smoother.reset();
+    this.bodyMapper.reset();
+    this.bodySmoother.reset();
     this.options.onParameters(null);
+    this.options.onBodyParameters(null);
     this.options.onLandmarks([]);
     this.options.onStatus({ state: 'stopped' });
   }
@@ -171,12 +190,25 @@ export class FaceTracker {
   }
 
   private applyResult(session: Session, reply: Extract<FaceWorkerReply, { type: 'result' }>): void {
-    this.options.onLandmarks(reply.landmarks);
     const parameters = reply.observation ? this.mapper.map({
       ...reply.observation, landmarks: reply.landmarks,
       aspectRatio: this.options.video.videoWidth / this.options.video.videoHeight,
     }) : null;
     const now = session.lastFrame;
+    if (reply.body !== undefined) {
+      session.bodyLandmarks = (reply.body?.landmarks ?? []).filter((point) => (point.visibility ?? 0) >= 0.6);
+      const body = reply.body ? this.bodyMapper.map(reply.body,
+        this.options.video.videoWidth / this.options.video.videoHeight) : null;
+      session.bodyFound = body != null;
+      if (body) {
+        const elapsed = Number.isFinite(session.lastBodyParameterTime) ? (now - session.lastBodyParameterTime) / 1000 : 0;
+        session.lastBodyTime = now;
+        session.lastBodyParameterTime = now;
+        this.options.onBodyParameters(this.bodySmoother.update(body, elapsed));
+      }
+    }
+    if (now - session.lastBodyTime > 500 && Number.isFinite(session.lastBodyParameterTime)) this.clearBody(session);
+    this.options.onLandmarks([...reply.landmarks, ...session.bodyLandmarks]);
     if (parameters) {
       const elapsed = session.lastParameterTime ? (now - session.lastParameterTime) / 1000 : 0;
       session.lastParameterTime = now;
@@ -187,7 +219,18 @@ export class FaceTracker {
       session.lastParameterTime = 0;
       this.options.onParameters(null);
     }
-    this.options.onStatus({ state: 'running', faceFound: parameters != null });
+    this.options.onStatus({ state: 'running', faceFound: parameters != null,
+      bodyFound: session.bodyFound, bodyAvailable: session.bodyAvailable });
+  }
+
+  private clearBody(session: Session): void {
+    session.bodyFound = false;
+    session.lastBodyParameterTime = -Infinity;
+    session.lastBodyTime = -Infinity;
+    session.bodyLandmarks = [];
+    this.bodyMapper.reset();
+    this.bodySmoother.reset();
+    this.options.onBodyParameters(null);
   }
 
   private tick(session: Session, time: number): void {

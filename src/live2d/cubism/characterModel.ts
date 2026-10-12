@@ -20,7 +20,7 @@ import { CubismPhysicsUpdater } from '@framework/motion/cubismphysicsupdater';
 import { CubismPoseUpdater } from '@framework/motion/cubismposeupdater';
 import { CubismUpdateScheduler } from '@framework/motion/cubismupdatescheduler';
 
-import type { FaceParameters, ParameterOffsets } from '../../types';
+import type { BodyParameters, FaceParameters, ParameterOffsets } from '../../types';
 import { selectTapTarget, type TapTarget } from '../tapTarget';
 import { MotionSequence } from '../motionSequence';
 
@@ -63,6 +63,7 @@ export class CharacterModel extends CubismUserModel {
   private looking = false;
   private tiltOffsets: ParameterOffsets | null = null;
   private faceParameters: FaceParameters | null = null;
+  private bodyParameters: BodyParameters | null = null;
   private readonly textures: WebGLTexture[] = [];
   private readonly ids = {
     angleX: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamAngleX),
@@ -71,6 +72,8 @@ export class CharacterModel extends CubismUserModel {
     eyeBallX: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeBallX),
     eyeBallY: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeBallY),
     bodyAngleX: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBodyAngleX),
+    bodyAngleY: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBodyAngleY),
+    bodyAngleZ: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBodyAngleZ),
     breath: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamBreath),
     eyeLOpen: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeLOpen),
     eyeROpen: CubismFramework.getIdManager().getId(CubismDefaultParameterId.ParamEyeROpen),
@@ -175,6 +178,7 @@ export class CharacterModel extends CubismUserModel {
     }
 
     if (this.faceParameters && !this.looking) this.applyFacePose(this.faceParameters);
+    if (this.bodyParameters) this.applyBodyPose(this.bodyParameters);
 
     this.scheduler.onLateUpdate(model, deltaSeconds);
     // Sensor-controlled pose wins over automatic sway, expressions and physics.
@@ -191,6 +195,7 @@ export class CharacterModel extends CubismUserModel {
       model.setParameterValueById(this.ids.browLY, face.browLY);
       model.setParameterValueById(this.ids.browRY, face.browRY);
     }
+    if (this.bodyParameters) this.applyBodyPose(this.bodyParameters);
     model.update();
   }
 
@@ -211,7 +216,13 @@ export class CharacterModel extends CubismUserModel {
     model.setParameterValueById(this.ids.angleZ, face.angleZ);
     model.setParameterValueById(this.ids.eyeBallX, face.eyeBallX);
     model.setParameterValueById(this.ids.eyeBallY, face.eyeBallY);
-    model.setParameterValueById(this.ids.bodyAngleX, face.bodyAngleX);
+  }
+
+  private applyBodyPose(body: BodyParameters): void {
+    const model = this.getModel();
+    model.setParameterValueById(this.ids.bodyAngleX, body.bodyAngleX);
+    model.setParameterValueById(this.ids.bodyAngleY, body.bodyAngleY);
+    model.setParameterValueById(this.ids.bodyAngleZ, body.bodyAngleZ);
   }
 
   draw(
@@ -244,6 +255,10 @@ export class CharacterModel extends CubismUserModel {
 
   setFaceParameters(parameters: FaceParameters | null): void {
     this.faceParameters = parameters;
+  }
+
+  setBodyParameters(parameters: BodyParameters | null): void {
+    this.bodyParameters = parameters;
   }
 
   /** Gaze target in model space; values are clamped to the -1…1 look range. */

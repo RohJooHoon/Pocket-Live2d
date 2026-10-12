@@ -42,3 +42,10 @@ export interface FaceParameters extends ParameterOffsets {
   browLY: number;
   browRY: number;
 }
+
+/** Independent upper-body pose from shoulders and hips, not inferred from the head. */
+export interface BodyParameters {
+  bodyAngleX: number;
+  bodyAngleY: number;
+  bodyAngleZ: number;
+}

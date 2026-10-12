@@ -131,7 +131,8 @@ export class FaceMapper {
       angleY: clamp(-angleDifference(pose.pitch, this.baseline.pitch), -30, 30),
       // Roll follows Cubism's direction; negating it makes a head tilt mirror backwards.
       angleZ: clamp(angleDifference(pose.roll, this.baseline.roll), -30, 30),
-      bodyAngleX: angleX / 3,
+      // Torso movement is supplied by the independent upper-body tracker.
+      bodyAngleX: 0,
       eyeBallX,
       eyeBallY: (score('eyeLookUpLeft') + score('eyeLookUpRight') -
         score('eyeLookDownLeft') - score('eyeLookDownRight')) / 2,

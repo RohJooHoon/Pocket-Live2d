@@ -45,6 +45,8 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
   const cameraEnabled = ref(false);
   const cameraState = ref<CameraStatus['state']>('stopped');
   const faceFound = ref(false);
+  const bodyFound = ref(false);
+  const bodyAvailable = ref(true);
   const uiHidden = ref(false);
   const restoreHintVisible = ref(false);
   let restoreHintTimer: ReturnType<typeof setTimeout> | undefined;
@@ -229,6 +231,7 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
     const tracker: FaceTracker = new FaceTracker({
       video,
       onParameters: (parameters) => renderer?.setFaceParameters(parameters),
+      onBodyParameters: (parameters) => renderer?.setBodyParameters(parameters),
       onLandmarks: (points) => {
         const canvas = elements.facePoints();
         if (canvas) drawFacePoints(canvas, points, video);
@@ -238,6 +241,8 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
         cameraEnabled.value = enabled;
         cameraState.value = cameraStatus.state;
         faceFound.value = cameraStatus.state === 'running' && cameraStatus.faceFound;
+        bodyFound.value = cameraStatus.state === 'running' && cameraStatus.bodyFound;
+        bodyAvailable.value = cameraStatus.state !== 'running' || cameraStatus.bodyAvailable;
         if (cameraStatus.state === 'error') status.showNotice(cameraStatus.message);
         // Inference reports status every frame. Only mode changes affect playback.
         if (wasEnabled !== enabled) {
@@ -322,6 +327,8 @@ export function useCharacterStage(elements: CharacterStageElements, { landscape,
       enabled: readonly(cameraEnabled),
       state: readonly(cameraState),
       faceFound: readonly(faceFound),
+      bodyFound: readonly(bodyFound),
+      bodyAvailable: readonly(bodyAvailable),
       canToggle: computed(() => ready.value || cameraEnabled.value),
     },
     uiHidden: readonly(uiHidden),

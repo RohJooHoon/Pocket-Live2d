@@ -40,7 +40,7 @@ describe('camera parameter mapping', () => {
     expect(pose.angleX).toBeCloseTo(-15);
     expect(pose.angleY).toBeCloseTo(-10);
     expect(pose.angleZ).toBeCloseTo(-10);
-    expect(pose.bodyAngleX).toBeCloseTo(-5);
+    expect(pose.bodyAngleX).toBe(0); // Moving the head does not bend the torso.
   });
 
   it('limits extreme movement and handles the 180 degree wrap', () => {

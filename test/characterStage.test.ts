@@ -39,7 +39,7 @@ async function fixture() {
   const renderer: CharacterRenderer = {
     lookAt: vi.fn(), releaseLook: vi.fn(), tap: vi.fn(() => true),
     setAutomaticMotionEnabled: vi.fn(),
-    setTiltOffsets: vi.fn(), setFaceParameters: vi.fn(), playMotion: vi.fn(),
+    setTiltOffsets: vi.fn(), setFaceParameters: vi.fn(), setBodyParameters: vi.fn(), playMotion: vi.fn(),
     cycleExpression: vi.fn(() => null), setPaused: vi.fn(), dispose: vi.fn(),
   };
   vi.mocked(loadCharacter).mockResolvedValue({ character: __CHARACTER__, modelDirectory: '/model/' });

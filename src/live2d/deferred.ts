@@ -1,4 +1,4 @@
-import type { FaceParameters, ParameterOffsets } from '../types';
+import type { BodyParameters, FaceParameters, ParameterOffsets } from '../types';
 import type { CharacterRenderer } from './renderer';
 
 /**
@@ -10,6 +10,7 @@ export class DeferredRenderer implements CharacterRenderer {
   private target: CharacterRenderer | null = null;
   private pendingTilt: ParameterOffsets | null = null;
   private pendingFace: FaceParameters | null = null;
+  private pendingBody: BodyParameters | null = null;
   private paused = false;
   private automaticMotionEnabled = false;
   private disposed = false;
@@ -23,6 +24,7 @@ export class DeferredRenderer implements CharacterRenderer {
     target.setAutomaticMotionEnabled(this.automaticMotionEnabled);
     target.setTiltOffsets(this.pendingTilt);
     target.setFaceParameters(this.pendingFace);
+    target.setBodyParameters(this.pendingBody);
     if (this.paused) target.setPaused(true);
   }
 
@@ -51,6 +53,11 @@ export class DeferredRenderer implements CharacterRenderer {
   setFaceParameters(parameters: FaceParameters | null): void {
     this.pendingFace = parameters;
     this.target?.setFaceParameters(parameters);
+  }
+
+  setBodyParameters(parameters: BodyParameters | null): void {
+    this.pendingBody = parameters;
+    this.target?.setBodyParameters(parameters);
   }
 
   playMotion(group: string): void {

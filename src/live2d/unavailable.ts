@@ -13,6 +13,7 @@ export const createRenderer: CreateRenderer = (options) => {
     setAutomaticMotionEnabled: () => {},
     setTiltOffsets: () => {},
     setFaceParameters: () => {},
+    setBodyParameters: () => {},
     playMotion: () => {},
     cycleExpression: () => null,
     setPaused: () => {},

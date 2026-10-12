@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FaceTracker, type CameraPlatform } from '../src/input/faceTracker';
 import type { FaceWorkerReply } from '../src/input/faceProtocol';
+import { bodyObservation } from './bodyFixture';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -33,9 +34,9 @@ function fixture() {
     requestFrame: vi.fn((callback) => { frame = callback; return 1; }),
     cancelFrame: vi.fn(),
   };
-  const onParameters = vi.fn(), onStatus = vi.fn(), onLandmarks = vi.fn();
-  const tracker = new FaceTracker({ video: video as unknown as HTMLVideoElement, onParameters, onStatus, onLandmarks }, platform);
-  return { tracker, video, worker, platform, cameraStream, onParameters, onStatus, onLandmarks, frame: (time: number) => frame(time) };
+  const onParameters = vi.fn(), onStatus = vi.fn(), onLandmarks = vi.fn(), onBodyParameters = vi.fn();
+  const tracker = new FaceTracker({ video: video as unknown as HTMLVideoElement, onParameters, onBodyParameters, onStatus, onLandmarks }, platform);
+  return { tracker, video, worker, platform, cameraStream, onParameters, onBodyParameters, onStatus, onLandmarks, frame: (time: number) => frame(time) };
 }
 
 async function flush() { for (let i = 0; i < 5; i++) await Promise.resolve(); }
@@ -168,7 +169,7 @@ describe('camera lifecycle', () => {
     const f = fixture();
     const pending = f.tracker.start();
     await flush();
-    await vi.advanceTimersByTimeAsync(30000);
+    await vi.advanceTimersByTimeAsync(60000);
     await pending;
     expect(f.tracker.isEnabled).toBe(false);
     expect(f.cameraStream.track.stop).toHaveBeenCalledOnce();
@@ -190,6 +191,54 @@ describe('camera lifecycle', () => {
     f.onLandmarks.mockClear();
     f.worker.emit({ type: 'result', observation: null, landmarks: [{ x: 0.2, y: 0.2 }] });
     expect(f.onLandmarks).not.toHaveBeenCalled();
+  });
+
+  it('tracks the torso independently, keeps skipped body frames and clears lost or stopped poses', async () => {
+    const f = fixture();
+    await started(f);
+    const observation = { matrix: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,-50,1], scores: {} };
+    const emit = async (time: number, reply: Extract<FaceWorkerReply, { type: 'result' }>) => {
+      f.video.currentTime += 1;
+      f.frame(time);
+      await flush();
+      f.worker.emit(reply);
+    };
+    await emit(1000, { type: 'result', landmarks: [], observation, body: bodyObservation() });
+    await emit(1200, { type: 'result', landmarks: [], observation, body: bodyObservation(0, 0, 15) });
+    expect(f.onBodyParameters).toHaveBeenLastCalledWith(expect.objectContaining({ bodyAngleX: 0, bodyAngleY: 0,
+      bodyAngleZ: expect.any(Number) }));
+    expect(f.onBodyParameters.mock.lastCall![0].bodyAngleZ).toBeGreaterThan(7);
+    const count = f.onBodyParameters.mock.calls.length;
+    await emit(1400, { type: 'result', landmarks: [], observation: null });
+    expect(f.onBodyParameters).toHaveBeenCalledTimes(count);
+    expect(f.onLandmarks.mock.lastCall![0]).toHaveLength(4);
+    await emit(1900, { type: 'result', landmarks: [], observation, body: null });
+    expect(f.onBodyParameters).toHaveBeenLastCalledWith(null);
+    expect(f.onParameters.mock.lastCall![0]).not.toBeNull();
+    await emit(2100, { type: 'result', landmarks: [], observation, body: bodyObservation(0, 0, 15) });
+    expect(f.onBodyParameters).toHaveBeenLastCalledWith({ bodyAngleX: 0, bodyAngleY: 0, bodyAngleZ: 0 });
+    f.tracker.stop();
+    f.worker.emit({ type: 'result', landmarks: [], observation, body: bodyObservation(0, 0, 25) });
+    expect(f.onBodyParameters).toHaveBeenLastCalledWith(null);
+  });
+
+  it('keeps facial tracking alive if body inference fails', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = fixture();
+    await started(f);
+    f.worker.emit({ type: 'body-error', message: 'Body inference failed' });
+    expect(f.tracker.isEnabled).toBe(true);
+    expect(f.worker.terminate).not.toHaveBeenCalled();
+    expect(f.onBodyParameters).toHaveBeenLastCalledWith(null);
+    f.frame(1000);
+    await flush();
+    f.worker.emit({ type: 'result', landmarks: [], observation: {
+      matrix: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,-50,1], scores: { jawOpen: 0.65 },
+    } });
+    expect(f.onParameters).toHaveBeenLastCalledWith(expect.objectContaining({ mouthOpen: 1 }));
+    expect(f.onStatus).toHaveBeenLastCalledWith({ state: 'running', faceFound: true, bodyFound: false, bodyAvailable: false });
+    f.tracker.stop();
+    warning.mockRestore();
   });
 
   it('cleans up video when autoplay fails and explains denied permissions', async () => {

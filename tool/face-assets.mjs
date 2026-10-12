@@ -8,6 +8,8 @@ if (typeof http.setGlobalProxyFromEnv === 'function') http.setGlobalProxyFromEnv
 
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 const MODEL_HASH = '64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff';
+const BODY_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const BODY_MODEL_HASH = '59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a';
 
 export async function stageFaceAssets(root, publicDir) {
   const cache = resolve(root, 'vendor/mediapipe/face_landmarker.task');
@@ -26,6 +28,19 @@ export async function stageFaceAssets(root, publicDir) {
   const out = resolve(publicDir, 'face');
   mkdirSync(out, { recursive: true });
   writeFileSync(resolve(out, 'face_landmarker.task'), model);
+  const bodyCache = resolve(root, 'vendor/mediapipe/pose_landmarker_lite.task');
+  let bodyModel = existsSync(bodyCache) ? readFileSync(bodyCache) : null;
+  if (!bodyModel || createHash('sha256').update(bodyModel).digest('hex') !== BODY_MODEL_HASH) {
+    console.log('Downloading the official MediaPipe Pose Landmarker Lite model (5.8 MB)…');
+    const response = await fetch(BODY_MODEL_URL, { signal: AbortSignal.timeout(60000) });
+    if (!response.ok) throw new Error(`Body model download failed (${response.status})`);
+    bodyModel = Buffer.from(await response.arrayBuffer());
+    if (createHash('sha256').update(bodyModel).digest('hex') !== BODY_MODEL_HASH) {
+      throw new Error('Body model checksum mismatch; refusing to stage it.');
+    }
+    writeFileSync(bodyCache, bodyModel);
+  }
+  writeFileSync(resolve(out, 'pose_landmarker_lite.task'), bodyModel);
   cpSync(resolve(root, 'node_modules/@mediapipe/tasks-vision/vision_bundle.js'), resolve(out, 'vision_bundle.js'));
   cpSync(resolve(root, 'node_modules/@mediapipe/tasks-vision/wasm'), resolve(out, 'wasm'), { recursive: true });
   cpSync(resolve(root, 'legal/mediapipe_notice.txt'), resolve(out, 'NOTICE.txt'));
